@@ -20,6 +20,7 @@ boolean auto_mode_state = false;
 boolean fault_state = false;
 boolean newData = false;
 boolean timer_running = false;
+boolean shutdown_in_progress = false;
 const byte numChars = 5;
 char receivedChars[numChars];
 const byte clean_nozzle_pin = 9;
@@ -116,6 +117,7 @@ void loop() {
   auto_mode();
   handle_faults();
   ink_data();
+  shutdown();
 }
 
 //Read mySerial Data
@@ -248,7 +250,7 @@ void state_report() {
   state_report_value = (ink_pressure_value + pump_pressure_value + pump_vacuum_value +
                         add_ink_value + add_makeup_value + air_pressure_sensor_value + vacuum_sensor_value + reservoir_lower_sensor_value +
                         reservoir_upper_sensor_value + pump_lower_sensor_value + pump_upper_sensor_value + timer_lower_sensor_value +
-                        timer_upper_sensor_value + fault_value + vacuum_value + auto_mode_value);
+                        timer_upper_sensor_value + fault_value + vacuum_value + auto_mode_value + clean_nozzle_value);
   if (previous_state_report_value != state_report_value) {
     mySerial.println("#" + String(state_report_value));
     previous_state_report_value = state_report_value;
@@ -474,11 +476,7 @@ void auto_mode_off() {
   ink_pressure_off();
   clean_nozzle_on();
   shutdown_millis = millis();
-  if (millis() - shutdown_millis > 10000){
-  vacuum_off();
-  auto_mode_state = false;
-  auto_mode_case = 0;
-}
+  shutdown_in_progress = true;
 }
 
 //Handle Faults
@@ -584,13 +582,25 @@ void auto_mode() {
 
 //Ink Data
 void ink_data() {
-if (millis() - ink_data_millis > 1000){
+if (millis() - ink_data_millis > 5000){
 sensors.requestTemperatures();
 gravityTds.setTemperature(sensors.getTempCByIndex(0));
 gravityTds.update();
 tdsValue = gravityTds.getTdsValue();
-Serial.println("@C" + String(tdsValue,0));
-Serial.println("@T" + String(sensors.getTempCByIndex(0)));
+mySerial.println("@C" + String(tdsValue,0));
+mySerial.println("@T" + String(sensors.getTempCByIndex(0)));
 ink_data_millis = millis();
+}
+}
+
+//Shutdown
+void shutdown() {
+if (shutdown_in_progress == true){
+if (millis() - shutdown_millis > 30000){
+  vacuum_off();
+  auto_mode_state = false;
+  auto_mode_case = 0;
+  shutdown_in_progress = false;
+}
 }
 }
