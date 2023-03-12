@@ -13,6 +13,8 @@ pump_pressure_state = 0
 pump_vacuum_state = 0
 add_ink_state = 0
 add_makeup_state = 0
+clean_nozzle_state = 0
+
 
 #Open Serial
 ser = serial.Serial()
@@ -84,6 +86,8 @@ class MainFrame(tk.Frame):
         self.add_ink_label.grid(row=5, column=0)
         self.add_makeup_label = tk.Label(self.Functions, text="Add MakeUp")
         self.add_makeup_label.grid(row=6, column=0)
+        self.clean_nozzle_label = tk.Label(self.Functions, text="Clean Nozzle")
+        self.clean_nozzle_label.grid(row=7, column=0)
         #Buttons
         self.auto_mode_button = tk.Button(self.Functions, text="OFF", command=self.toggle_auto_mode, bg="white")
         self.auto_mode_button.grid(row=0, column=1, sticky="ew", pady = (0, 10))
@@ -99,6 +103,8 @@ class MainFrame(tk.Frame):
         self.add_ink_button.grid(row=5, column=1, sticky="ew")
         self.add_makeup_button = tk.Button(self.Functions, text="OFF", command=self.toggle_add_makeup, bg="white")
         self.add_makeup_button.grid(row=6, column=1, sticky="ew")
+        self.clean_nozzle_button = tk.Button(self.Functions, text="OFF", command=self.toggle_clean_nozzle, bg="white")
+        self.clean_nozzle_button.grid(row=7, column=1, sticky="ew")
         
         # --Sensors--
         # Frames
@@ -147,6 +153,21 @@ class MainFrame(tk.Frame):
         #Scrolled Texts
         self.ink_time_scrolledtext = scrolledtext.ScrolledText(self.Ink_Time, wrap = tk.WORD, width = 5, height = 14, font = ("Courier", 12))
         self.ink_time_scrolledtext.grid(row=1, column=0)
+        
+        # --Ink Data--
+        # Frames
+        self.Ink_Data = tk.Frame(self.Top_Group)
+        self.Ink_Data.grid(row=0, column=4, pady = 10, padx = 10, sticky="n")
+        #Labels
+        self.celsius0 = tk.Label(self.Ink_Data, text="----")
+        self.celsius0.grid(row=0, column=0, sticky="w")
+        self.celsius1 = tk.Label(self.Ink_Data, text="°C")
+        self.celsius1.grid(row=0, column=1, sticky="w")
+        self.ppm0 = tk.Label(self.Ink_Data, text="----")
+        self.ppm0.grid(row=1, column=0, sticky="w")
+        self.ppm1 = tk.Label(self.Ink_Data, text="ppm")
+        self.ppm1.grid(row=1, column=1, sticky="w")
+        
 
         # --Serial Connection--
         #Frames
@@ -232,6 +253,7 @@ class MainFrame(tk.Frame):
         global pump_vacuum_state
         global add_ink_state
         global add_makeup_state
+        global clean_nozzle_state
         
         print("<IN>", data.strip("\n"))
         self.console_scrolledtext.insert("end", "<IN> " + data)
@@ -282,7 +304,7 @@ class MainFrame(tk.Frame):
             else:
                 add_makeup_state = 0
                 self.add_makeup_button.config(text="OFF")
-                self.add_makeup_button.config(bg="white")
+                self.add_makeup_button.config(bg="white")  
                 
             if state_report_value & (1 << (6 - 1)):
                 self.air_pressure_sensor_button.config(text="ON")
@@ -350,10 +372,28 @@ class MainFrame(tk.Frame):
                 auto_mode_state = 0
                 self.auto_mode_button.config(text="OFF")
                 self.auto_mode_button.config(bg="white")
+                
+            if state_report_value & (1 << (17 - 1)):
+                clean_nozzle_state = 1
+                self.clean_nozzle_button.config(text="ON")
+                self.clean_nozzle_button.config(bg="green")
+            else:
+                clean_nozzle_state = 0
+                self.clean_nozzle_button.config(text="OFF")
+                self.clean_nozzle_button.config(bg="white")   
+                
         if data.startswith("$") == True:
             ink_time = data.strip("$")
             self.ink_time_scrolledtext.insert("end", ink_time.strip("\n") + "s\n")
             self.ink_time_scrolledtext.see("end")
+            
+        if data.startswith("@T") == True:
+            temperature = data.strip("@T")
+            self.celsius0.config(text=temperature.strip("\n"))
+            
+        if data.startswith("@C") == True:
+            conductivity = data.strip("@C")
+            self.ppm0.config(text=conductivity.strip("\n"))
 
     def toggle_ink_pressure(self):
         if ink_pressure_state == 1:
@@ -396,6 +436,12 @@ class MainFrame(tk.Frame):
             self.send_command("F014")
         else:
             self.send_command("F013")
+            
+    def toggle_clean_nozzle(self):
+        if clean_nozzle_state == 1:
+            self.send_command("F016")
+        else:
+            self.send_command("F015")
 
 app = tk.Tk()  
 main_frame = MainFrame()
