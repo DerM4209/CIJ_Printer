@@ -1,23 +1,18 @@
-#include <TimerOne.h>
 #include <AD9833.h>
-#define FNC_PIN 49
-AD9833 gen(FNC_PIN);
 #include <SoftwareSerial.h>
+#define FNC_PIN 49
 #define rxPin A15
 #define txPin A14
+AD9833 gen(FNC_PIN);
 SoftwareSerial mySerial =  SoftwareSerial(rxPin, txPin);
 
 //Variables
-const byte numChars = 5;
-char receivedChars[numChars];
-boolean newData = false;
 boolean auto_mode_state = false;
 boolean fault_state = false;
+boolean newData = false;
 boolean timer_running = false;
-const byte piezo_pwm_pin = 11;
-const byte led_pwm_pin = 12;
-const byte charge_pwm_pin = 13;
-const byte flashlight_pin = 9;
+const byte numChars = 5;
+char receivedChars[numChars];
 const byte vacuum_fault_pin = 8;
 const byte ink_pressure_pin = 7;
 const byte pump_pressure_pin = 6;
@@ -25,7 +20,6 @@ const byte vacuum_pin = 5;
 const byte pump_vacuum_pin = 4;
 const byte add_ink_pin = 3;
 const byte add_makeup_pin = 2;
-//const byte led_pin = 14;
 const byte air_pressure_sensor_pin = 15;
 const byte vacuum_sensor_pin = 14;
 const byte reservoir_lower_sensor_pin = 16;
@@ -34,6 +28,7 @@ const byte pump_lower_sensor_pin = 19;
 const byte pump_upper_sensor_pin = 18;
 const byte timer_lower_sensor_pin = 21;
 const byte timer_upper_sensor_pin = 20;
+int auto_mode_case = 0;
 long previous_state_report_value = 0;
 long state_report_value = 0;
 unsigned int ink_pressure_value = 0;
@@ -52,31 +47,22 @@ unsigned int timer_upper_sensor_value = 0;
 unsigned int fault_value = 0;
 unsigned int vacuum_value = 0;
 unsigned int auto_mode_value = 0;
-int auto_mode_case = 0;
 unsigned long start_timer_millis = 0;
-unsigned long ink_time = 0;
 unsigned long fault_millis = 0;
+unsigned long ink_data_millis = 0;
+unsigned long ink_time = 0;
 
 //Setup
 void setup() {
   gen.Begin();
   gen.ApplySignal(SINE_WAVE,REG0,46000);
   gen.EnableOutput(true);
-  
-  Timer1.initialize(24); //25
-  Timer1.pwm(led_pwm_pin, 512);
-  Timer1.pwm(piezo_pwm_pin, 512);
-  Timer1.pwm(charge_pwm_pin, 512);
-  pinMode(rxPin, INPUT);
-  pinMode(txPin, OUTPUT);
   mySerial.begin(9600);
   mySerial.println("Connected...");
   mySerial.println("Printer ready...");
   mySerial.println("#" + String(state_report_value));
-  pinMode(led_pwm_pin, OUTPUT);
-  pinMode(piezo_pwm_pin, OUTPUT);
-  pinMode(charge_pwm_pin, OUTPUT);
-  //pinMode(led_pin, OUTPUT);
+  pinMode(rxPin, INPUT);
+  pinMode(txPin, OUTPUT);
   pinMode(vacuum_pin, OUTPUT);
   pinMode(ink_pressure_pin, OUTPUT);
   pinMode(pump_pressure_pin, OUTPUT);
@@ -92,18 +78,13 @@ void setup() {
   pinMode(air_pressure_sensor_pin, INPUT_PULLUP);
   pinMode(vacuum_sensor_pin, INPUT_PULLUP);
   pinMode(vacuum_fault_pin, INPUT_PULLUP);
-  pinMode(flashlight_pin, OUTPUT);
-  digitalWrite(charge_pwm_pin, LOW);
   digitalWrite(ink_pressure_pin, HIGH);
   digitalWrite(pump_pressure_pin, HIGH);
   digitalWrite(pump_vacuum_pin, HIGH);
   digitalWrite(add_ink_pin, HIGH);
   digitalWrite(add_makeup_pin, HIGH);
   digitalWrite(vacuum_pin, HIGH);
-  tone(flashlight_pin, 40000);
-  
 }
-
 
 //Mainloop
 void loop() {
@@ -112,8 +93,8 @@ void loop() {
   state_report();
   auto_mode();
   handle_faults();
+  ink_data();
 }
-
 
 //Read mySerial Data
 void read_serial_data() {
@@ -136,7 +117,6 @@ void read_serial_data() {
     }
   }
 }
-
 
 //State Report
 void state_report() {
@@ -245,7 +225,6 @@ void state_report() {
     previous_state_report_value = state_report_value;
   }
 }
-
 
 //Manual Control
 void on_data() {
@@ -358,7 +337,6 @@ void on_data() {
   }
 }
 
-
 //Valve Functions
 //ON
 void ink_pressure_on() {
@@ -417,6 +395,7 @@ void auto_mode_on() {
   auto_mode_state = true;
   auto_mode_case = 1;
 }
+
 //OFF
 void ink_pressure_off() {
   //digitalWrite(led_pin, LOW);
@@ -459,7 +438,6 @@ void auto_mode_off() {
   auto_mode_case = 0;
 }
 
-
 //Handle Faults
 void handle_faults() {
 if (digitalRead(vacuum_fault_pin) == LOW){
@@ -476,7 +454,6 @@ else {
 fault_state = false;
 }
 }
-
 
 //Auto Mode
 void auto_mode() {
@@ -545,11 +522,9 @@ void auto_mode() {
     case 7: //Fill Timer
       if (digitalRead(timer_upper_sensor_pin) == LOW) {
         pump_pressure_on();
-		Timer1.setPwmDuty(piezo_pwm_pin, 0);
       }
       else {
         pump_pressure_off();
-		Timer1.setPwmDuty(piezo_pwm_pin, 512);
         auto_mode_case = 6;
       }
       break;
@@ -562,4 +537,12 @@ void auto_mode() {
       }
       break;
   }
+}
+
+//Ink Data
+void ink_data() {
+if (millis() - ink_data_millis > 1000){
+mySerial.println("inkdata");
+ink_data_millis = millis();
+}
 }
