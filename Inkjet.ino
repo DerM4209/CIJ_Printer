@@ -1,3 +1,12 @@
+#include <TimerOne.h>
+#include <AD9833.h>
+#define FNC_PIN 49
+AD9833 gen(FNC_PIN);
+#include <SoftwareSerial.h>
+#define rxPin A15
+#define txPin A14
+SoftwareSerial mySerial =  SoftwareSerial(rxPin, txPin);
+
 //Variables
 const byte numChars = 5;
 char receivedChars[numChars];
@@ -5,6 +14,10 @@ boolean newData = false;
 boolean auto_mode_state = false;
 boolean fault_state = false;
 boolean timer_running = false;
+const byte piezo_pwm_pin = 11;
+const byte led_pwm_pin = 12;
+const byte charge_pwm_pin = 13;
+const byte flashlight_pin = 9;
 const byte vacuum_fault_pin = 8;
 const byte ink_pressure_pin = 7;
 const byte pump_pressure_pin = 6;
@@ -12,7 +25,7 @@ const byte vacuum_pin = 5;
 const byte pump_vacuum_pin = 4;
 const byte add_ink_pin = 3;
 const byte add_makeup_pin = 2;
-const byte led_pin = 13;
+//const byte led_pin = 14;
 const byte air_pressure_sensor_pin = 15;
 const byte vacuum_sensor_pin = 14;
 const byte reservoir_lower_sensor_pin = 16;
@@ -44,14 +57,26 @@ unsigned long start_timer_millis = 0;
 unsigned long ink_time = 0;
 unsigned long fault_millis = 0;
 
-
 //Setup
 void setup() {
-  Serial.begin(9600);
-  Serial.println("Connected...");
-  Serial.println("Printer ready...");
-  Serial.println("#" + String(state_report_value));
-  pinMode(led_pin, OUTPUT);
+  gen.Begin();
+  gen.ApplySignal(SINE_WAVE,REG0,46000);
+  gen.EnableOutput(true);
+  
+  Timer1.initialize(24); //25
+  Timer1.pwm(led_pwm_pin, 512);
+  Timer1.pwm(piezo_pwm_pin, 512);
+  Timer1.pwm(charge_pwm_pin, 512);
+  pinMode(rxPin, INPUT);
+  pinMode(txPin, OUTPUT);
+  mySerial.begin(9600);
+  mySerial.println("Connected...");
+  mySerial.println("Printer ready...");
+  mySerial.println("#" + String(state_report_value));
+  pinMode(led_pwm_pin, OUTPUT);
+  pinMode(piezo_pwm_pin, OUTPUT);
+  pinMode(charge_pwm_pin, OUTPUT);
+  //pinMode(led_pin, OUTPUT);
   pinMode(vacuum_pin, OUTPUT);
   pinMode(ink_pressure_pin, OUTPUT);
   pinMode(pump_pressure_pin, OUTPUT);
@@ -67,12 +92,16 @@ void setup() {
   pinMode(air_pressure_sensor_pin, INPUT_PULLUP);
   pinMode(vacuum_sensor_pin, INPUT_PULLUP);
   pinMode(vacuum_fault_pin, INPUT_PULLUP);
+  pinMode(flashlight_pin, OUTPUT);
+  digitalWrite(charge_pwm_pin, LOW);
   digitalWrite(ink_pressure_pin, HIGH);
   digitalWrite(pump_pressure_pin, HIGH);
   digitalWrite(pump_vacuum_pin, HIGH);
   digitalWrite(add_ink_pin, HIGH);
   digitalWrite(add_makeup_pin, HIGH);
   digitalWrite(vacuum_pin, HIGH);
+  tone(flashlight_pin, 40000);
+  
 }
 
 
@@ -86,13 +115,13 @@ void loop() {
 }
 
 
-//Read Serial Data
+//Read mySerial Data
 void read_serial_data() {
   static byte ndx = 0;
   char endMarker = '\n';
   char rc;
-  while (Serial.available() > 0 && newData == false) {
-    rc = Serial.read();
+  while (mySerial.available() > 0 && newData == false) {
+    rc = mySerial.read();
     if (rc != endMarker) {
       receivedChars[ndx] = rc;
       ndx++;
@@ -212,7 +241,7 @@ void state_report() {
                         reservoir_upper_sensor_value + pump_lower_sensor_value + pump_upper_sensor_value + timer_lower_sensor_value +
                         timer_upper_sensor_value + fault_value + vacuum_value + auto_mode_value);
   if (previous_state_report_value != state_report_value) {
-    Serial.println("#" + String(state_report_value));
+    mySerial.println("#" + String(state_report_value));
     previous_state_report_value = state_report_value;
   }
 }
@@ -228,7 +257,7 @@ void on_data() {
         ink_pressure_on();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F003") == 0) {
@@ -236,7 +265,7 @@ void on_data() {
         pump_pressure_on();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F005") == 0) {
@@ -244,7 +273,7 @@ void on_data() {
         pump_vacuum_on();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F007") == 0) {
@@ -252,7 +281,7 @@ void on_data() {
         add_ink_on();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F009") == 0) {
@@ -260,7 +289,7 @@ void on_data() {
         add_makeup_on();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F011") == 0) {
@@ -268,7 +297,7 @@ void on_data() {
         vacuum_on();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F013") == 0) {
@@ -280,7 +309,7 @@ void on_data() {
         ink_pressure_off();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F004") == 0) {
@@ -288,7 +317,7 @@ void on_data() {
         pump_pressure_off();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F006") == 0) {
@@ -296,7 +325,7 @@ void on_data() {
         pump_vacuum_off();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F008") == 0) {
@@ -304,7 +333,7 @@ void on_data() {
         add_ink_off();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F010") == 0) {
@@ -312,7 +341,7 @@ void on_data() {
         add_makeup_off();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F012") == 0) {
@@ -320,7 +349,7 @@ void on_data() {
         vacuum_off();
       }
       else {
-        Serial.println("Turn Auto Mode off, first!");
+        mySerial.println("Turn Auto Mode off, first!");
       }
     }
     if (strcmp(receivedChars, "F014") == 0) {
@@ -334,55 +363,55 @@ void on_data() {
 //ON
 void ink_pressure_on() {
   if (digitalRead(vacuum_pin) == LOW) {
-    digitalWrite(led_pin, HIGH);
+    //digitalWrite(led_pin, HIGH);
     digitalWrite(ink_pressure_pin, LOW);
   }
   else {
-    Serial.println("Turn Vacuum on, first!");
+    mySerial.println("Turn Vacuum on, first!");
   }
 }
 void pump_pressure_on() {
   if (digitalRead(ink_pressure_pin) == LOW && digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_ink_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH) {
-    digitalWrite(led_pin, HIGH);
+    //digitalWrite(led_pin, HIGH);
     digitalWrite(pump_pressure_pin, LOW);
   }
   else {
-    Serial.println("Turn Ink Pressure on and Pump Vacuum, Add Ink, Add MakeUP off, first!");
+    mySerial.println("Turn Ink Pressure on and Pump Vacuum, Add Ink, Add MakeUP off, first!");
   }
 }
 void pump_vacuum_on() {
   if (digitalRead(pump_pressure_pin) == HIGH && digitalRead(ink_pressure_pin) == LOW && digitalRead(add_ink_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH) {
-    digitalWrite(led_pin, HIGH);
+    //digitalWrite(led_pin, HIGH);
     digitalWrite(pump_vacuum_pin, LOW);
   }
   else {
-    Serial.println("Turn Ink Pressure on and Pump Pressure, Add Ink, Add MakeUp off, first!");
+    mySerial.println("Turn Ink Pressure on and Pump Pressure, Add Ink, Add MakeUp off, first!");
   }
 }
 void add_ink_on() {
   if (digitalRead(ink_pressure_pin) == LOW && digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH && digitalRead(pump_pressure_pin) == HIGH) {
-    digitalWrite(led_pin, HIGH);
+    //digitalWrite(led_pin, HIGH);
     digitalWrite(add_ink_pin, LOW);
   }
   else {
-    Serial.println("Turn Ink Pressure on and Pump Vacuum, Pump Pressure, Add MakeUp off, first!");
+    mySerial.println("Turn Ink Pressure on and Pump Vacuum, Pump Pressure, Add MakeUp off, first!");
   }
 }
 void add_makeup_on() {
   if (digitalRead(ink_pressure_pin) == LOW && digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_ink_pin) == HIGH && digitalRead(pump_pressure_pin) == HIGH) {
-    digitalWrite(led_pin, HIGH);
+    //digitalWrite(led_pin, HIGH);
     digitalWrite(add_makeup_pin, LOW);
   }
   else {
-    Serial.println("Turn Ink Pressure on and Pump Vacuum, Pump Pressure, Add Ink off, first!");
+    mySerial.println("Turn Ink Pressure on and Pump Vacuum, Pump Pressure, Add Ink off, first!");
   }
 }
 void vacuum_on() {
-  digitalWrite(led_pin, HIGH);
+  //digitalWrite(led_pin, HIGH);
   digitalWrite(vacuum_pin, LOW);
 }
 void auto_mode_on() {
-  digitalWrite(led_pin, HIGH);
+  //digitalWrite(led_pin, HIGH);
   vacuum_on();
   ink_pressure_on();
   auto_mode_state = true;
@@ -390,7 +419,7 @@ void auto_mode_on() {
 }
 //OFF
 void ink_pressure_off() {
-  digitalWrite(led_pin, LOW);
+  //digitalWrite(led_pin, LOW);
   digitalWrite(ink_pressure_pin, HIGH);
   digitalWrite(pump_pressure_pin, HIGH);
   digitalWrite(pump_vacuum_pin, HIGH);
@@ -398,23 +427,23 @@ void ink_pressure_off() {
   digitalWrite(add_makeup_pin, HIGH);
 }
 void pump_pressure_off() {
-  digitalWrite(led_pin, LOW);
+  //digitalWrite(led_pin, LOW);
   digitalWrite(pump_pressure_pin, HIGH);
 }
 void pump_vacuum_off() {
-  digitalWrite(led_pin, LOW);
+  //digitalWrite(led_pin, LOW);
   digitalWrite(pump_vacuum_pin, HIGH);
 }
 void add_ink_off() {
-  digitalWrite(led_pin, LOW);
+  //digitalWrite(led_pin, LOW);
   digitalWrite(add_ink_pin, HIGH);
 }
 void add_makeup_off() {
-  digitalWrite(led_pin, LOW);
+  //digitalWrite(led_pin, LOW);
   digitalWrite(add_makeup_pin, HIGH);
 }
 void vacuum_off() {
-  digitalWrite(led_pin, LOW);
+  //digitalWrite(led_pin, LOW);
   digitalWrite(vacuum_pin, HIGH);
   digitalWrite(ink_pressure_pin, HIGH);
   digitalWrite(pump_pressure_pin, HIGH);
@@ -423,7 +452,7 @@ void vacuum_off() {
   digitalWrite(add_makeup_pin, HIGH);
 }
 void auto_mode_off() {
-  digitalWrite(led_pin, LOW);
+  //digitalWrite(led_pin, LOW);
   vacuum_off();
   ink_pressure_off();
   auto_mode_state = false;
@@ -458,20 +487,20 @@ void auto_mode() {
     case 1: //Stop Timer
       if (digitalRead(timer_lower_sensor_pin) == LOW) {
         if (timer_running == true) {
-		  Serial.println("Timer stopped!");
+		  mySerial.println("Timer stopped!");
           ink_time = millis() - start_timer_millis;
-          Serial.println("$" + String(ink_time / 1000));
+          mySerial.println("$" + String(ink_time / 1000));
         }
         auto_mode_case = 2;
       }
       break;
     case 2: //Check reservoir
       if (digitalRead(reservoir_lower_sensor_pin) == HIGH) {
-        Serial.println("Rerservoir filled!");
+        mySerial.println("Rerservoir filled!");
         auto_mode_case = 4;
       }
       else {
-        Serial.println("Filling Reservoir!");
+        mySerial.println("Filling Reservoir!");
         auto_mode_case = 3;
       }
       break;
@@ -486,11 +515,11 @@ void auto_mode() {
       break;
     case 4: //Check pump
       if (digitalRead(pump_upper_sensor_pin) == HIGH) {
-        Serial.println("Pump filled!");
+        mySerial.println("Pump filled!");
         auto_mode_case = 6;
       }
       else {
-        Serial.println("Filling Pump!");
+        mySerial.println("Filling Pump!");
         auto_mode_case = 5;
       }
       break;
@@ -505,20 +534,22 @@ void auto_mode() {
       break;
     case 6: //Check Timer
       if (digitalRead(timer_upper_sensor_pin) == HIGH) {
-        Serial.println("Timer filled!");
+        mySerial.println("Timer filled!");
         auto_mode_case = 8;
       }
       else {
-        Serial.println("Filling Timer!");
+        mySerial.println("Filling Timer!");
         auto_mode_case = 7;
       }
       break;
     case 7: //Fill Timer
       if (digitalRead(timer_upper_sensor_pin) == LOW) {
         pump_pressure_on();
+		Timer1.setPwmDuty(piezo_pwm_pin, 0);
       }
       else {
         pump_pressure_off();
+		Timer1.setPwmDuty(piezo_pwm_pin, 512);
         auto_mode_case = 6;
       }
       break;
@@ -526,7 +557,7 @@ void auto_mode() {
       if (digitalRead(timer_upper_sensor_pin) == LOW) {
         start_timer_millis = millis();
         timer_running = true;
-        Serial.println("Timer started!");
+        mySerial.println("Timer started!");
         auto_mode_case = 1;
       }
       break;
