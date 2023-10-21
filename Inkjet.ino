@@ -2,7 +2,7 @@
 #include <SoftwareSerial.h>
 #include <EEPROM.h>
 #include <GravityTDS.h>
-#include <OneWire.h> 
+#include <OneWire.h>
 #include <DallasTemperature.h>
 #define ONE_WIRE_BUS 10
 #define TdsSensorPin A0
@@ -11,7 +11,7 @@
 #define txPin A14
 AD9833 gen(FNC_PIN);
 SoftwareSerial mySerial =  SoftwareSerial(rxPin, txPin);
-OneWire oneWire(ONE_WIRE_BUS); 
+OneWire oneWire(ONE_WIRE_BUS);
 GravityTDS gravityTds;
 DallasTemperature sensors(&oneWire);
 
@@ -23,9 +23,10 @@ boolean timer_running = false;
 boolean shutdown_in_progress = false;
 const byte numChars = 5;
 char receivedChars[numChars];
-const byte clean_nozzle_pin = 9;
+const byte nozzle_ink_valve_pin = 9;
+const byte nozzle_vacuum_valve_pin = 11;
 const byte vacuum_fault_pin = 8;
-const byte ink_pressure_pin = 7;
+const byte drain_pin = 7;
 const byte pump_pressure_pin = 6;
 const byte vacuum_pin = 5;
 const byte pump_vacuum_pin = 4;
@@ -42,7 +43,7 @@ const byte timer_upper_sensor_pin = 20;
 int auto_mode_case = 0;
 long previous_state_report_value = 0;
 long state_report_value = 0;
-unsigned int ink_pressure_value = 0;
+unsigned int drain_value = 0;
 unsigned int pump_pressure_value = 0;
 unsigned int pump_vacuum_value = 0;
 unsigned int add_ink_value = 0;
@@ -57,7 +58,8 @@ unsigned int timer_lower_sensor_value = 0;
 unsigned int timer_upper_sensor_value = 0;
 unsigned int fault_value = 0;
 unsigned int vacuum_value = 0;
-long clean_nozzle_value = 0;
+long nozzle_ink_valve_value = 0;
+long nozzle_vacuum_valve_value = 0;
 unsigned int auto_mode_value = 0;
 unsigned long start_timer_millis = 0;
 unsigned long fault_millis = 0;
@@ -69,7 +71,7 @@ float tdsValue = 0;
 //Setup
 void setup() {
   gen.Begin();
-  gen.ApplySignal(SINE_WAVE,REG0,46000);
+  gen.ApplySignal(SINE_WAVE, REG0, 50000);
   gen.EnableOutput(true);
   Serial.begin(9600);
   mySerial.begin(9600);
@@ -83,9 +85,10 @@ void setup() {
   gravityTds.begin();
   pinMode(rxPin, INPUT);
   pinMode(txPin, OUTPUT);
-  pinMode(clean_nozzle_pin, OUTPUT);
+  pinMode(nozzle_ink_valve_pin, OUTPUT);
+  pinMode(nozzle_vacuum_valve_pin, OUTPUT);
   pinMode(vacuum_pin, OUTPUT);
-  pinMode(ink_pressure_pin, OUTPUT);
+  pinMode(drain_pin, OUTPUT);
   pinMode(pump_pressure_pin, OUTPUT);
   pinMode(pump_vacuum_pin, OUTPUT);
   pinMode(add_ink_pin, OUTPUT);
@@ -99,14 +102,14 @@ void setup() {
   pinMode(air_pressure_sensor_pin, INPUT_PULLUP);
   pinMode(vacuum_sensor_pin, INPUT_PULLUP);
   pinMode(vacuum_fault_pin, INPUT_PULLUP);
-  digitalWrite(ink_pressure_pin, HIGH);
+  digitalWrite(drain_pin, HIGH);
   digitalWrite(pump_pressure_pin, HIGH);
   digitalWrite(pump_vacuum_pin, HIGH);
   digitalWrite(add_ink_pin, HIGH);
   digitalWrite(add_makeup_pin, HIGH);
   digitalWrite(vacuum_pin, HIGH);
-  digitalWrite(clean_nozzle_pin, LOW);
-  
+  digitalWrite(nozzle_ink_valve_pin, HIGH);
+  digitalWrite(nozzle_vacuum_valve_pin, HIGH);
 }
 
 //Mainloop
@@ -144,11 +147,11 @@ void read_serial_data() {
 
 //State Report
 void state_report() {
-  if (digitalRead(ink_pressure_pin) == LOW) {
-    ink_pressure_value = 1;
+  if (digitalRead(drain_pin) == LOW) {
+    drain_value = 1;
   }
   else {
-    ink_pressure_value = 0;
+    drain_value = 0;
   }
   if (digitalRead(pump_pressure_pin) == LOW) {
     pump_pressure_value = 2;
@@ -240,17 +243,23 @@ void state_report() {
   else {
     auto_mode_value = 0;
   }
-  if (digitalRead(clean_nozzle_pin) == LOW) {
-    clean_nozzle_value = 65536;
+  if (digitalRead(nozzle_ink_valve_pin) == LOW) {
+    nozzle_ink_valve_value = 65536;
   }
   else {
-    clean_nozzle_value = 0;
+    nozzle_ink_valve_value = 0;
   }
-  
-  state_report_value = (ink_pressure_value + pump_pressure_value + pump_vacuum_value +
+  if (digitalRead(nozzle_vacuum_valve_pin) == LOW) {
+    nozzle_vacuum_valve_value = 131072;
+  }
+  else {
+    nozzle_vacuum_valve_value = 0;
+  }
+
+  state_report_value = (drain_value + pump_pressure_value + pump_vacuum_value +
                         add_ink_value + add_makeup_value + air_pressure_sensor_value + vacuum_sensor_value + reservoir_lower_sensor_value +
                         reservoir_upper_sensor_value + pump_lower_sensor_value + pump_upper_sensor_value + timer_lower_sensor_value +
-                        timer_upper_sensor_value + fault_value + vacuum_value + auto_mode_value + clean_nozzle_value);
+                        timer_upper_sensor_value + fault_value + vacuum_value + auto_mode_value + nozzle_ink_valve_value + nozzle_vacuum_valve_value);
   if (previous_state_report_value != state_report_value) {
     mySerial.println("#" + String(state_report_value));
     previous_state_report_value = state_report_value;
@@ -264,7 +273,7 @@ void on_data() {
     //ON
     if (strcmp(receivedChars, "F001") == 0) {
       if (auto_mode_state == false) {
-        ink_pressure_on();
+        drain_on();
       }
       else {
         mySerial.println("Turn Auto Mode off, first!");
@@ -287,20 +296,10 @@ void on_data() {
       }
     }
     if (strcmp(receivedChars, "F007") == 0) {
-      if (auto_mode_state == false) {
-        add_ink_on();
-      }
-      else {
-        mySerial.println("Turn Auto Mode off, first!");
-      }
+      add_ink_on();
     }
     if (strcmp(receivedChars, "F009") == 0) {
-      if (auto_mode_state == false) {
-        add_makeup_on();
-      }
-      else {
-        mySerial.println("Turn Auto Mode off, first!");
-      }
+      add_makeup_on();
     }
     if (strcmp(receivedChars, "F011") == 0) {
       if (auto_mode_state == false) {
@@ -313,19 +312,27 @@ void on_data() {
     if (strcmp(receivedChars, "F013") == 0) {
       auto_mode_on();
     }
-	if (strcmp(receivedChars, "F015") == 0) {
+    if (strcmp(receivedChars, "F015") == 0) {
       if (auto_mode_state == false) {
-        clean_nozzle_on();
+        nozzle_ink_valve_on();
       }
       else {
         mySerial.println("Turn Auto Mode off, first!");
       }
     }
-	
+    if (strcmp(receivedChars, "F017") == 0) {
+      if (auto_mode_state == false) {
+        nozzle_vacuum_valve_on();
+      }
+      else {
+        mySerial.println("Turn Auto Mode off, first!");
+      }
+    }
+
     //OFF
     if (strcmp(receivedChars, "F002") == 0) {
       if (auto_mode_state == false) {
-        ink_pressure_off();
+        drain_off();
       }
       else {
         mySerial.println("Turn Auto Mode off, first!");
@@ -348,20 +355,10 @@ void on_data() {
       }
     }
     if (strcmp(receivedChars, "F008") == 0) {
-      if (auto_mode_state == false) {
-        add_ink_off();
-      }
-      else {
-        mySerial.println("Turn Auto Mode off, first!");
-      }
+      add_ink_off();
     }
     if (strcmp(receivedChars, "F010") == 0) {
-      if (auto_mode_state == false) {
-        add_makeup_off();
-      }
-      else {
-        mySerial.println("Turn Auto Mode off, first!");
-      }
+      add_makeup_off();
     }
     if (strcmp(receivedChars, "F012") == 0) {
       if (auto_mode_state == false) {
@@ -374,9 +371,17 @@ void on_data() {
     if (strcmp(receivedChars, "F014") == 0) {
       auto_mode_off();
     }
-	if (strcmp(receivedChars, "F016") == 0) {
+    if (strcmp(receivedChars, "F016") == 0) {
       if (auto_mode_state == false) {
-        clean_nozzle_off();
+        nozzle_ink_valve_off();
+      }
+      else {
+        mySerial.println("Turn Auto Mode off, first!");
+      }
+    }
+    if (strcmp(receivedChars, "F018") == 0) {
+      if (auto_mode_state == false) {
+        nozzle_vacuum_valve_off();
       }
       else {
         mySerial.println("Turn Auto Mode off, first!");
@@ -387,67 +392,86 @@ void on_data() {
 
 //Valve Functions
 //ON
-void ink_pressure_on() {
-  if (digitalRead(vacuum_pin) == LOW) {
-    digitalWrite(ink_pressure_pin, LOW);
+void drain_on() {
+  if (digitalRead(vacuum_pin) == HIGH) {
+    digitalWrite(drain_pin, LOW);
   }
   else {
-    mySerial.println("Turn Vacuum on, first!");
+    mySerial.println("Turn Vacuum off, first!");
   }
 }
 void pump_pressure_on() {
-  if (digitalRead(ink_pressure_pin) == LOW && digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_ink_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH) {
+  if (digitalRead(pump_vacuum_pin) == HIGH) {
     digitalWrite(pump_pressure_pin, LOW);
   }
   else {
-    mySerial.println("Turn Ink Pressure on and Pump Vacuum, Add Ink, Add MakeUP off, first!");
+    mySerial.println("Turn Pump Vacuum off, first!");
   }
 }
 void pump_vacuum_on() {
-  if (digitalRead(pump_pressure_pin) == HIGH && digitalRead(ink_pressure_pin) == LOW && digitalRead(add_ink_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH) {
+  if (digitalRead(pump_pressure_pin) == HIGH && digitalRead(add_ink_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH && digitalRead(nozzle_vacuum_valve_pin) == HIGH) {
     digitalWrite(pump_vacuum_pin, LOW);
   }
   else {
-    mySerial.println("Turn Ink Pressure on and Pump Pressure, Add Ink, Add MakeUp off, first!");
+    mySerial.println("Turn Pump Pressure, Add Ink, Add MakeUp, Nozzle Vacuum off, first!");
   }
 }
 void add_ink_on() {
-  if (digitalRead(ink_pressure_pin) == LOW && digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH && digitalRead(pump_pressure_pin) == HIGH) {
+  if (digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH && digitalRead(nozzle_vacuum_valve_pin) == HIGH) {
     digitalWrite(add_ink_pin, LOW);
   }
   else {
-    mySerial.println("Turn Ink Pressure on and Pump Vacuum, Pump Pressure, Add MakeUp off, first!");
+    mySerial.println("Turn Pump Vacuum, Add MakeUp, Nozzle Vacuum off, first!");
   }
 }
 void add_makeup_on() {
-  if (digitalRead(ink_pressure_pin) == LOW && digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_ink_pin) == HIGH && digitalRead(pump_pressure_pin) == HIGH) {
+  if (digitalRead(pump_vacuum_pin) == HIGH && digitalRead(add_ink_pin) == HIGH && digitalRead(nozzle_vacuum_valve_pin) == HIGH) {
     digitalWrite(add_makeup_pin, LOW);
   }
   else {
-    mySerial.println("Turn Ink Pressure on and Pump Vacuum, Pump Pressure, Add Ink off, first!");
+    mySerial.println("Pump Vacuum, Add Ink, Nozzle Vacuum off, first!");
   }
 }
 void vacuum_on() {
-  digitalWrite(vacuum_pin, LOW);
+  if (digitalRead(drain_pin) == HIGH) {
+    digitalWrite(vacuum_pin, LOW);
+  }
+  else {
+    mySerial.println("Turn Drain off, first!");
+  }
 }
-void clean_nozzle_on() {
-  digitalWrite(clean_nozzle_pin, LOW);
+void nozzle_ink_valve_on() {
+  if (digitalRead(nozzle_vacuum_valve_pin) == HIGH) {
+    digitalWrite(nozzle_ink_valve_pin, LOW);
+  }
+  else {
+    mySerial.println("Turn Nozzle Vacuum off, first!");
+  }
 }
+void nozzle_vacuum_valve_on() {
+  if (digitalRead(nozzle_ink_valve_pin) == HIGH && digitalRead(add_ink_pin) == HIGH && digitalRead(add_makeup_pin) == HIGH && digitalRead(pump_vacuum_pin) == HIGH) {
+    digitalWrite(nozzle_vacuum_valve_pin, LOW);
+  }
+  else {
+    mySerial.println("Turn Nozzle Ink, Add Ink, Add MakeUp, Pump Vacuum off, first!");
+  }
+}
+
+
+
 void auto_mode_on() {
+  drain_off();
   vacuum_on();
-  ink_pressure_on();
-  clean_nozzle_off();
+  nozzle_vacuum_valve_off();
+  nozzle_ink_valve_on();
   auto_mode_state = true;
   auto_mode_case = 1;
+  mySerial.println("Printer in Auto Mode!");
 }
 
 //OFF
-void ink_pressure_off() {
-  digitalWrite(ink_pressure_pin, HIGH);
-  digitalWrite(pump_pressure_pin, HIGH);
-  digitalWrite(pump_vacuum_pin, HIGH);
-  digitalWrite(add_ink_pin, HIGH);
-  digitalWrite(add_makeup_pin, HIGH);
+void drain_off() {
+  digitalWrite(drain_pin, HIGH);
 }
 void pump_pressure_off() {
   digitalWrite(pump_pressure_pin, HIGH);
@@ -463,37 +487,45 @@ void add_makeup_off() {
 }
 void vacuum_off() {
   digitalWrite(vacuum_pin, HIGH);
-  digitalWrite(ink_pressure_pin, HIGH);
-  digitalWrite(pump_pressure_pin, HIGH);
   digitalWrite(pump_vacuum_pin, HIGH);
   digitalWrite(add_ink_pin, HIGH);
   digitalWrite(add_makeup_pin, HIGH);
+  digitalWrite(nozzle_vacuum_valve_pin, HIGH);
+  digitalWrite(nozzle_ink_valve_pin, HIGH);
 }
-void clean_nozzle_off() {
-  digitalWrite(clean_nozzle_pin, HIGH);
+void nozzle_ink_valve_off() {
+  digitalWrite(nozzle_ink_valve_pin, HIGH);
+}
+void nozzle_vacuum_valve_off() {
+  digitalWrite(nozzle_vacuum_valve_pin, HIGH);
 }
 void auto_mode_off() {
-  ink_pressure_off();
-  clean_nozzle_on();
-  shutdown_millis = millis();
-  shutdown_in_progress = true;
+  if (shutdown_in_progress == true && auto_mode_state == true) {
+    mySerial.println("Shutdown in Progress!");
+  }
+  if (shutdown_in_progress == false && auto_mode_state == true) {
+    nozzle_ink_valve_off();
+    shutdown_millis = millis();
+    shutdown_in_progress = true;
+    mySerial.println("Shutdown in Progress!");
+  }
 }
 
 //Handle Faults
 void handle_faults() {
-if (digitalRead(vacuum_fault_pin) == LOW){
-auto_mode_off();
-if (millis() - fault_millis > 1000){
-fault_state = true;
-}
-if (millis() - fault_millis > 2000){
-fault_state = false;
-fault_millis = millis();
-}
-}
-else {
-fault_state = false;
-}
+  if (digitalRead(vacuum_fault_pin) == HIGH) {
+    auto_mode_off();
+    if (millis() - fault_millis > 1000) {
+      fault_state = true;
+    }
+    if (millis() - fault_millis > 2000) {
+      fault_state = false;
+      fault_millis = millis();
+    }
+  }
+  else {
+    fault_state = false;
+  }
 }
 
 //Auto Mode
@@ -505,7 +537,7 @@ void auto_mode() {
     case 1: //Stop Timer
       if (digitalRead(timer_lower_sensor_pin) == LOW) {
         if (timer_running == true) {
-		  mySerial.println("Timer stopped!");
+          mySerial.println("Timer stopped!");
           ink_time = millis() - start_timer_millis;
           mySerial.println("$" + String(ink_time / 1000));
         }
@@ -513,8 +545,8 @@ void auto_mode() {
       }
       break;
     case 2: //Check reservoir
-      if (digitalRead(reservoir_lower_sensor_pin) == HIGH) {
-        mySerial.println("Rerservoir filled!");
+      if (digitalRead(reservoir_lower_sensor_pin) == HIGH || digitalRead(pump_upper_sensor_pin) == HIGH) {
+        mySerial.println("Rerservoir filled or Pump already filled!");
         auto_mode_case = 4;
       }
       else {
@@ -582,25 +614,26 @@ void auto_mode() {
 
 //Ink Data
 void ink_data() {
-if (millis() - ink_data_millis > 5000){
-sensors.requestTemperatures();
-gravityTds.setTemperature(sensors.getTempCByIndex(0));
-gravityTds.update();
-tdsValue = gravityTds.getTdsValue();
-mySerial.println("@C" + String(tdsValue,0));
-mySerial.println("@T" + String(sensors.getTempCByIndex(0)));
-ink_data_millis = millis();
-}
+  if (millis() - ink_data_millis > 5000) {
+    sensors.requestTemperatures();
+    gravityTds.setTemperature(sensors.getTempCByIndex(0));
+    gravityTds.update();
+    tdsValue = gravityTds.getTdsValue();
+    mySerial.println("@C" + String(tdsValue, 0));
+    mySerial.println("@T" + String(sensors.getTempCByIndex(0)));
+    ink_data_millis = millis();
+  }
 }
 
 //Shutdown
 void shutdown() {
-if (shutdown_in_progress == true){
-if (millis() - shutdown_millis > 30000){
-  vacuum_off();
-  auto_mode_state = false;
-  auto_mode_case = 0;
-  shutdown_in_progress = false;
-}
-}
+  if (shutdown_in_progress == true) {
+    if (millis() - shutdown_millis > 30000) {
+      vacuum_off();
+      auto_mode_state = false;
+      auto_mode_case = 0;
+      shutdown_in_progress = false;
+      mySerial.println("Printer Off!");
+    }
+  }
 }

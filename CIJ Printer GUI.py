@@ -14,6 +14,7 @@ pump_vacuum_state = 0
 add_ink_state = 0
 add_makeup_state = 0
 clean_nozzle_state = 0
+nozzle_vacuum_state = 0
 
 
 #Open Serial
@@ -74,20 +75,23 @@ class MainFrame(tk.Frame):
         #Labels
         self.auto_mode_label = tk.Label(self.Functions, text="Auto Mode")
         self.auto_mode_label.grid(row=0, column=0, sticky="ew", pady = (0, 10))
-        self.ink_pressure_label = tk.Label(self.Functions, text="Ink Pressure")
+        self.ink_pressure_label = tk.Label(self.Functions, text="Buffer Drain Valve")
         self.ink_pressure_label.grid(row=1, column=0)
-        self.vacuum_label = tk.Label(self.Functions, text="Vacuum")
+        self.vacuum_label = tk.Label(self.Functions, text="Vacuum Pump")
         self.vacuum_label.grid(row=2, column=0)
-        self.pump_pressure_label = tk.Label(self.Functions, text="Pump Pressure")
+        self.pump_pressure_label = tk.Label(self.Functions, text="Pump Pressure Valve")
         self.pump_pressure_label.grid(row=3, column=0)
-        self.pump_vacuum_label = tk.Label(self.Functions, text="Pump Vacuum")
+        self.pump_vacuum_label = tk.Label(self.Functions, text="Pump Vacuum Valve")
         self.pump_vacuum_label.grid(row=4, column=0)
-        self.add_ink_label = tk.Label(self.Functions, text="Add Ink")
+        self.add_ink_label = tk.Label(self.Functions, text="Add Ink Valve")
         self.add_ink_label.grid(row=5, column=0)
-        self.add_makeup_label = tk.Label(self.Functions, text="Add MakeUp")
+        self.add_makeup_label = tk.Label(self.Functions, text="Add MakeUp Valve")
         self.add_makeup_label.grid(row=6, column=0)
-        self.clean_nozzle_label = tk.Label(self.Functions, text="Clean Nozzle")
+        self.clean_nozzle_label = tk.Label(self.Functions, text="Nozzle Ink Valve")
         self.clean_nozzle_label.grid(row=7, column=0)
+        self.nozzle_vacuum_valve_label = tk.Label(self.Functions, text="Nozzle Vacuum Valve")
+        self.nozzle_vacuum_valve_label.grid(row=8, column=0)
+        
         #Buttons
         self.auto_mode_button = tk.Button(self.Functions, text="OFF", command=self.toggle_auto_mode, bg="white")
         self.auto_mode_button.grid(row=0, column=1, sticky="ew", pady = (0, 10))
@@ -105,6 +109,9 @@ class MainFrame(tk.Frame):
         self.add_makeup_button.grid(row=6, column=1, sticky="ew")
         self.clean_nozzle_button = tk.Button(self.Functions, text="OFF", command=self.toggle_clean_nozzle, bg="white")
         self.clean_nozzle_button.grid(row=7, column=1, sticky="ew")
+        self.nozzle_vacuum_button = tk.Button(self.Functions, text="OFF", command=self.toggle_nozzle_vacuum, bg="white")
+        self.nozzle_vacuum_button.grid(row=8, column=1, sticky="ew")
+        
         
         # --Sensors--
         # Frames
@@ -254,6 +261,7 @@ class MainFrame(tk.Frame):
         global add_ink_state
         global add_makeup_state
         global clean_nozzle_state
+        global nozzle_vacuum_state
         
         print("<IN>", data.strip("\n"))
         self.console_scrolledtext.insert("end", "<IN> " + data)
@@ -380,7 +388,16 @@ class MainFrame(tk.Frame):
             else:
                 clean_nozzle_state = 0
                 self.clean_nozzle_button.config(text="OFF")
-                self.clean_nozzle_button.config(bg="white")   
+                self.clean_nozzle_button.config(bg="white")
+                
+            if state_report_value & (1 << (18 - 1)):
+                nozzle_vacuum_state = 1
+                self.nozzle_vacuum_button.config(text="ON")
+                self.nozzle_vacuum_button.config(bg="green")
+            else:
+                nozzle_vacuum_state = 0
+                self.nozzle_vacuum_button.config(text="OFF")
+                self.nozzle_vacuum_button.config(bg="white")
                 
         if data.startswith("$") == True:
             ink_time = data.strip("$")
@@ -442,6 +459,12 @@ class MainFrame(tk.Frame):
             self.send_command("F016")
         else:
             self.send_command("F015")
+            
+    def toggle_nozzle_vacuum(self):
+        if nozzle_vacuum_state == 1:
+            self.send_command("F018")
+        else:
+            self.send_command("F017")
 
 app = tk.Tk()  
 main_frame = MainFrame()
