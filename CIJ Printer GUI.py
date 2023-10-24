@@ -8,14 +8,15 @@ from tkinter import scrolledtext
 
 auto_mode_state = 0
 vacuum_state = 0
-ink_pressure_state = 0
-pump_pressure_state = 0
-pump_vacuum_state = 0
+drain_state = 0
+pump_tank_pressure_state = 0
+pump_tank_vacuum_state = 0
 add_ink_state = 0
 add_makeup_state = 0
-clean_nozzle_state = 0
+nozzle_ink_state = 0
 nozzle_vacuum_state = 0
-
+continuous_testing_state = 0
+viscosimeter_state = 0
 
 #Open Serial
 ser = serial.Serial()
@@ -75,42 +76,47 @@ class MainFrame(tk.Frame):
         #Labels
         self.auto_mode_label = tk.Label(self.Functions, text="Auto Mode")
         self.auto_mode_label.grid(row=0, column=0, sticky="ew", pady = (0, 10))
-        self.ink_pressure_label = tk.Label(self.Functions, text="Buffer Drain Valve")
-        self.ink_pressure_label.grid(row=1, column=0)
-        self.vacuum_label = tk.Label(self.Functions, text="Vacuum Pump")
+        self.drain_label = tk.Label(self.Functions, text="Drain")
+        self.drain_label.grid(row=1, column=0)
+        self.vacuum_label = tk.Label(self.Functions, text="Vacuum")
         self.vacuum_label.grid(row=2, column=0)
-        self.pump_pressure_label = tk.Label(self.Functions, text="Pump Pressure Valve")
-        self.pump_pressure_label.grid(row=3, column=0)
-        self.pump_vacuum_label = tk.Label(self.Functions, text="Pump Vacuum Valve")
-        self.pump_vacuum_label.grid(row=4, column=0)
-        self.add_ink_label = tk.Label(self.Functions, text="Add Ink Valve")
+        self.pump_tank_pressure_label = tk.Label(self.Functions, text="Pump Tank Pressure")
+        self.pump_tank_pressure_label.grid(row=3, column=0)
+        self.pump_tank_vacuum_label = tk.Label(self.Functions, text="Pump Tank Vacuum")
+        self.pump_tank_vacuum_label.grid(row=4, column=0)
+        self.add_ink_label = tk.Label(self.Functions, text="Add Ink")
         self.add_ink_label.grid(row=5, column=0)
-        self.add_makeup_label = tk.Label(self.Functions, text="Add MakeUp Valve")
+        self.add_makeup_label = tk.Label(self.Functions, text="Add MakeUp")
         self.add_makeup_label.grid(row=6, column=0)
-        self.clean_nozzle_label = tk.Label(self.Functions, text="Nozzle Ink Valve")
-        self.clean_nozzle_label.grid(row=7, column=0)
-        self.nozzle_vacuum_valve_label = tk.Label(self.Functions, text="Nozzle Vacuum Valve")
-        self.nozzle_vacuum_valve_label.grid(row=8, column=0)
+        self.nozzle_ink_label = tk.Label(self.Functions, text="Nozzle Ink")
+        self.nozzle_ink_label.grid(row=7, column=0)
+        self.nozzle_vacuum_label = tk.Label(self.Functions, text="Nozzle Vacuum")
+        self.nozzle_vacuum_label.grid(row=8, column=0)
+        self.viscosimeter_label = tk.Label(self.Functions, text="Viscosimeter")
+        self.viscosimeter_label.grid(row=9, column=0)
+        
         
         #Buttons
         self.auto_mode_button = tk.Button(self.Functions, text="OFF", command=self.toggle_auto_mode, bg="white")
         self.auto_mode_button.grid(row=0, column=1, sticky="ew", pady = (0, 10))
-        self.ink_pressure_button = tk.Button(self.Functions, text="OFF", command=self.toggle_ink_pressure, bg="white")
-        self.ink_pressure_button.grid(row=1, column=1, sticky="ew")
+        self.drain_button = tk.Button(self.Functions, text="OFF", command=self.toggle_drain, bg="white")
+        self.drain_button.grid(row=1, column=1, sticky="ew")
         self.vacuum_button = tk.Button(self.Functions, text="OFF", command=self.toggle_vacuum, bg="white")
         self.vacuum_button.grid(row=2, column=1, sticky="ew")
-        self.pump_pressure_button = tk.Button(self.Functions, text="OFF", command=self.toggle_pump_pressure, bg="white")
-        self.pump_pressure_button.grid(row=3, column=1, sticky="ew")
-        self.pump_vacuum_button = tk.Button(self.Functions, text="OFF", command=self.toggle_pump_vacuum, bg="white")
-        self.pump_vacuum_button.grid(row=4, column=1, sticky="ew")
+        self.pump_tank_pressure_button = tk.Button(self.Functions, text="OFF", command=self.toggle_pump_tank_pressure, bg="white")
+        self.pump_tank_pressure_button.grid(row=3, column=1, sticky="ew")
+        self.pump_tank_vacuum_button = tk.Button(self.Functions, text="OFF", command=self.toggle_pump_tank_vacuum, bg="white")
+        self.pump_tank_vacuum_button.grid(row=4, column=1, sticky="ew")
         self.add_ink_button = tk.Button(self.Functions, text="OFF", command=self.toggle_add_ink, bg="white")
         self.add_ink_button.grid(row=5, column=1, sticky="ew")
         self.add_makeup_button = tk.Button(self.Functions, text="OFF", command=self.toggle_add_makeup, bg="white")
         self.add_makeup_button.grid(row=6, column=1, sticky="ew")
-        self.clean_nozzle_button = tk.Button(self.Functions, text="OFF", command=self.toggle_clean_nozzle, bg="white")
-        self.clean_nozzle_button.grid(row=7, column=1, sticky="ew")
+        self.nozzle_ink_button = tk.Button(self.Functions, text="OFF", command=self.toggle_nozzle_ink, bg="white")
+        self.nozzle_ink_button.grid(row=7, column=1, sticky="ew")
         self.nozzle_vacuum_button = tk.Button(self.Functions, text="OFF", command=self.toggle_nozzle_vacuum, bg="white")
         self.nozzle_vacuum_button.grid(row=8, column=1, sticky="ew")
+        self.viscosimeter_button = tk.Button(self.Functions, text="OFF", command=self.toggle_viscosimeter, bg="white")
+        self.viscosimeter_button.grid(row=9, column=1, sticky="ew")
         
         
         # --Sensors--
@@ -120,46 +126,49 @@ class MainFrame(tk.Frame):
         #Labels
         self.fault_label = tk.Label(self.Sensors, text="Fault")
         self.fault_label.grid(row=0, column=0, sticky="ew", pady = (0, 10))
-        self.air_pressure_label = tk.Label(self.Sensors, text="Air Pressure Sensor")
-        self.air_pressure_label.grid(row=1, column=0)
-        self.vacuum_sensor_label = tk.Label(self.Sensors, text="Vacuum Sensor")
+        self.air_pressure_sensor_label = tk.Label(self.Sensors, text="Air Pressure")
+        self.air_pressure_sensor_label.grid(row=1, column=0)
+        self.vacuum_sensor_label = tk.Label(self.Sensors, text="Vacuum")
         self.vacuum_sensor_label.grid(row=2, column=0)
-        self.reservoir_ink_level_label = tk.Label(self.Sensors, text="Reservoir Ink Level")
-        self.reservoir_ink_level_label.grid(row=4, column=0)
-        self.pump_ink_level_label = tk.Label(self.Sensors, text="Pump Ink Level")
-        self.pump_ink_level_label.grid(row=6, column=0)
-        self.timer_ink_level_label = tk.Label(self.Sensors, text="Timer Ink Level")
-        self.timer_ink_level_label.grid(row=8, column=0)
+        self.vacuum_tank_ink_level_label = tk.Label(self.Sensors, text="Vacuum Tank")
+        self.vacuum_tank_ink_level_label.grid(row=4, column=0)
+        self.pump_tank_ink_level_label = tk.Label(self.Sensors, text="Pump Tank")
+        self.pump_tank_ink_level_label.grid(row=6, column=0)
+        self.pressure_tank_ink_level_label = tk.Label(self.Sensors, text="Pressure Tank")
+        self.pressure_tank_ink_level_label.grid(row=8, column=0)
         #Buttons
-        self.fault_button = tk.Button(self.Sensors, text="   ", bg="white")
+        self.fault_button = tk.Button(self.Sensors, text="      ", bg="white")
         self.fault_button.grid(row=0, column=1, sticky="ew", pady = (0, 10))
-        self.air_pressure_sensor_button = tk.Button(self.Sensors, text="OFF", bg="white")
+        self.air_pressure_sensor_button = tk.Button(self.Sensors, text="      ", bg="white")
         self.air_pressure_sensor_button.grid(row=1, column=1, sticky="ew")
-        self.vacuum_sensor_button = tk.Button(self.Sensors, text="OFF", bg="white")
+        self.vacuum_sensor_button = tk.Button(self.Sensors, text="      ", bg="white")
         self.vacuum_sensor_button.grid(row=2, column=1, sticky="ew", pady = (0, 10))
-        self.reservoir_ink_level_button_0 = tk.Button(self.Sensors, text="   ", bg="white")
-        self.reservoir_ink_level_button_0.grid(row=3, column=1, sticky="ew")
-        self.reservoir_ink_level_button_1 = tk.Button(self.Sensors, text="   ", bg="white")
-        self.reservoir_ink_level_button_1.grid(row=4, column=1, sticky="ew", pady = (0, 10))
-        self.pump_ink_level_button_0 = tk.Button(self.Sensors, text="   ", bg="white")
-        self.pump_ink_level_button_0.grid(row=5, column=1, sticky="ew")
-        self.pump_ink_level_button_1 = tk.Button(self.Sensors, text="   ", bg="white")
-        self.pump_ink_level_button_1.grid(row=6, column=1, sticky="ew", pady = (0, 10))
-        self.timer_ink_level_button_0 = tk.Button(self.Sensors, text="   ", bg="white")
-        self.timer_ink_level_button_0.grid(row=7, column=1, sticky="ew")
-        self.timer_ink_level_button_1 = tk.Button(self.Sensors, text="   ", bg="white")
-        self.timer_ink_level_button_1.grid(row=8, column=1, sticky="ew")
+        self.vacuum_tank_ink_level_button_0 = tk.Button(self.Sensors, text="      ", bg="white")
+        self.vacuum_tank_ink_level_button_0.grid(row=3, column=1, sticky="ew")
+        self.vacuum_tank_ink_level_button_1 = tk.Button(self.Sensors, text="      ", bg="white")
+        self.vacuum_tank_ink_level_button_1.grid(row=4, column=1, sticky="ew", pady = (0, 10))
+        self.pump_tank_ink_level_button_0 = tk.Button(self.Sensors, text="      ", bg="white")
+        self.pump_tank_ink_level_button_0.grid(row=5, column=1, sticky="ew")
+        self.pump_tank_ink_level_button_1 = tk.Button(self.Sensors, text="      ", bg="white")
+        self.pump_tank_ink_level_button_1.grid(row=6, column=1, sticky="ew", pady = (0, 10))
+        self.pressure_tank_ink_level_button_0 = tk.Button(self.Sensors, text="      ", bg="white")
+        self.pressure_tank_ink_level_button_0.grid(row=7, column=1, sticky="ew")
+        self.pressure_tank_ink_level_button_1 = tk.Button(self.Sensors, text="      ", bg="white")
+        self.pressure_tank_ink_level_button_1.grid(row=8, column=1, sticky="ew")
         
-        # --Ink Time--
+        # --Viscosity--
         # Frames
-        self.Ink_Time = tk.Frame(self.Top_Group)
-        self.Ink_Time.grid(row=0, column=3, pady = 10, padx = 10, sticky="n")
+        self.Viscosity = tk.Frame(self.Top_Group)
+        self.Viscosity.grid(row=0, column=3, pady = 10, padx = 10, sticky="n")
         #Labels
-        self.ink_time_label = tk.Label(self.Ink_Time, text="Ink Time")
-        self.ink_time_label.grid(row=0, column=0, sticky="w")
+        self.viscosity_label = tk.Label(self.Viscosity, text="Viscosity")
+        self.viscosity_label.grid(row=0, column=0, sticky="ew", pady = (0, 15))
         #Scrolled Texts
-        self.ink_time_scrolledtext = scrolledtext.ScrolledText(self.Ink_Time, wrap = tk.WORD, width = 5, height = 14, font = ("Courier", 12))
-        self.ink_time_scrolledtext.grid(row=1, column=0)
+        self.viscosity_scrolledtext = scrolledtext.ScrolledText(self.Viscosity, wrap = tk.WORD, width = 5, height = 11, font = ("Courier", 12))
+        self.viscosity_scrolledtext.grid(row=1, column=0, sticky="ew", pady = (0, 10))
+        self.continuous_testing_button = tk.Button(self.Viscosity, text="Continuous Testing", command=self.toggle_continuous_testing, bg="white")
+        self.continuous_testing_button.grid(row=2, column=0, sticky="w")
+        
         
         # --Ink Data--
         # Frames
@@ -255,13 +264,15 @@ class MainFrame(tk.Frame):
     def on_data(self, data):
         global auto_mode_state
         global vacuum_state
-        global ink_pressure_state
-        global pump_pressure_state
-        global pump_vacuum_state
+        global drain_state
+        global pump_tank_pressure_state
+        global pump_tank_vacuum_state
         global add_ink_state
         global add_makeup_state
-        global clean_nozzle_state
+        global nozzle_ink_state
         global nozzle_vacuum_state
+        global continuous_testing_state
+        global viscosimeter_state
         
         print("<IN>", data.strip("\n"))
         self.console_scrolledtext.insert("end", "<IN> " + data)
@@ -270,31 +281,31 @@ class MainFrame(tk.Frame):
             state_report_value = int(data.strip("#"))
             
             if state_report_value & (1 << (1 - 1)):
-                ink_pressure_state = 1
-                self.ink_pressure_button.config(text="ON")
-                self.ink_pressure_button.config(bg="green")
+                drain_state = 1
+                self.drain_button.config(text="ON")
+                self.drain_button.config(bg="green")
             else:
-                ink_pressure_state = 0
-                self.ink_pressure_button.config(text="OFF")
-                self.ink_pressure_button.config(bg="white")
+                drain_state = 0
+                self.drain_button.config(text="OFF")
+                self.drain_button.config(bg="white")
                 
             if state_report_value & (1 << (2 - 1)):
-                pump_pressure_state = 1
-                self.pump_pressure_button.config(text="ON")
-                self.pump_pressure_button.config(bg="green")
+                pump_tank_pressure_state = 1
+                self.pump_tank_pressure_button.config(text="ON")
+                self.pump_tank_pressure_button.config(bg="green")
             else:
-                pump_pressure_state = 0
-                self.pump_pressure_button.config(text="OFF")
-                self.pump_pressure_button.config(bg="white")
+                pump_tank_pressure_state = 0
+                self.pump_tank_pressure_button.config(text="OFF")
+                self.pump_tank_pressure_button.config(bg="white")
                 
             if state_report_value & (1 << (3 - 1)):
-                pump_vacuum_state = 1
-                self.pump_vacuum_button.config(text="ON")
-                self.pump_vacuum_button.config(bg="green")
+                pump_tank_vacuum_state = 1
+                self.pump_tank_vacuum_button.config(text="ON")
+                self.pump_tank_vacuum_button.config(bg="green")
             else:
-                pump_vacuum_state = 0
-                self.pump_vacuum_button.config(text="OFF")
-                self.pump_vacuum_button.config(bg="white")
+                pump_tank_vacuum_state = 0
+                self.pump_tank_vacuum_button.config(text="OFF")
+                self.pump_tank_vacuum_button.config(bg="white")
                 
             if state_report_value & (1 << (4 - 1)):
                 add_ink_state = 1
@@ -315,48 +326,44 @@ class MainFrame(tk.Frame):
                 self.add_makeup_button.config(bg="white")  
                 
             if state_report_value & (1 << (6 - 1)):
-                self.air_pressure_sensor_button.config(text="ON")
                 self.air_pressure_sensor_button.config(bg="green")
             else:
-                self.air_pressure_sensor_button.config(text="OFF")
                 self.air_pressure_sensor_button.config(bg="white")
                 
             if state_report_value & (1 << (7 - 1)):
-                self.vacuum_sensor_button.config(text="ON")
                 self.vacuum_sensor_button.config(bg="green")
             else:
-                self.vacuum_sensor_button.config(text="OFF")
                 self.vacuum_sensor_button.config(bg="white")
                 
             if state_report_value & (1 << (8 - 1)):
-                self.reservoir_ink_level_button_1.config(bg="blue")
+                self.vacuum_tank_ink_level_button_1.config(bg="blue")
             else:
-                self.reservoir_ink_level_button_1.config(bg="white")
+                self.vacuum_tank_ink_level_button_1.config(bg="white")
                 
             if state_report_value & (1 << (9 - 1)):
-                self.reservoir_ink_level_button_0.config(bg="blue")
+                self.vacuum_tank_ink_level_button_0.config(bg="blue")
             else:
-                self.reservoir_ink_level_button_0.config(bg="white")
+                self.vacuum_tank_ink_level_button_0.config(bg="white")
                 
             if state_report_value & (1 << (10 - 1)):
-                self.pump_ink_level_button_1.config(bg="blue")
+                self.pump_tank_ink_level_button_1.config(bg="blue")
             else:
-                self.pump_ink_level_button_1.config(bg="white")
+                self.pump_tank_ink_level_button_1.config(bg="white")
                 
             if state_report_value & (1 << (11 - 1)):
-                self.pump_ink_level_button_0.config(bg="blue")
+                self.pump_tank_ink_level_button_0.config(bg="blue")
             else:
-                self.pump_ink_level_button_0.config(bg="white")
+                self.pump_tank_ink_level_button_0.config(bg="white")
                        
             if state_report_value & (1 << (12 - 1)):
-                self.timer_ink_level_button_1.config(bg="blue")
+                self.pressure_tank_ink_level_button_1.config(bg="blue")
             else:
-                self.timer_ink_level_button_1.config(bg="white")
+                self.pressure_tank_ink_level_button_1.config(bg="white")
                 
             if state_report_value & (1 << (13 - 1)):
-                self.timer_ink_level_button_0.config(bg="blue")
+                self.pressure_tank_ink_level_button_0.config(bg="blue")
             else:
-                self.timer_ink_level_button_0.config(bg="white")
+                self.pressure_tank_ink_level_button_0.config(bg="white")
                 
             if state_report_value & (1 << (14 - 1)):
                 self.fault_button.config(bg="red")
@@ -382,13 +389,13 @@ class MainFrame(tk.Frame):
                 self.auto_mode_button.config(bg="white")
                 
             if state_report_value & (1 << (17 - 1)):
-                clean_nozzle_state = 1
-                self.clean_nozzle_button.config(text="ON")
-                self.clean_nozzle_button.config(bg="green")
+                nozzle_ink_state = 1
+                self.nozzle_ink_button.config(text="ON")
+                self.nozzle_ink_button.config(bg="green")
             else:
-                clean_nozzle_state = 0
-                self.clean_nozzle_button.config(text="OFF")
-                self.clean_nozzle_button.config(bg="white")
+                nozzle_ink_state = 0
+                self.nozzle_ink_button.config(text="OFF")
+                self.nozzle_ink_button.config(bg="white")
                 
             if state_report_value & (1 << (18 - 1)):
                 nozzle_vacuum_state = 1
@@ -399,10 +406,28 @@ class MainFrame(tk.Frame):
                 self.nozzle_vacuum_button.config(text="OFF")
                 self.nozzle_vacuum_button.config(bg="white")
                 
+            if state_report_value & (1 << (19 - 1)):
+                continuous_testing_state = 1
+                self.continuous_testing_button.config(bg="yellow")
+            else:
+                continuous_testing_state = 0
+                self.continuous_testing_button.config(bg="white")
+                
+            if state_report_value & (1 << (20 - 1)):
+                viscosimeter_state = 1
+                self.viscosimeter_button.config(text="ON")
+                self.viscosimeter_button.config(bg="green")
+                
+            else:
+                viscosimeter_state = 0
+                self.viscosimeter_button.config(text="OFF")
+                self.viscosimeter_button.config(bg="white")
+                
+                
         if data.startswith("$") == True:
-            ink_time = data.strip("$")
-            self.ink_time_scrolledtext.insert("end", ink_time.strip("\n") + "s\n")
-            self.ink_time_scrolledtext.see("end")
+            viscosity_reading = data.strip("$")
+            self.viscosity_scrolledtext.insert("end", viscosity_reading.strip("\n") + "ms\n")
+            self.viscosity_scrolledtext.see("end")
             
         if data.startswith("@T") == True:
             temperature = data.strip("@T")
@@ -412,20 +437,20 @@ class MainFrame(tk.Frame):
             conductivity = data.strip("@C")
             self.ppm0.config(text=conductivity.strip("\n"))
 
-    def toggle_ink_pressure(self):
-        if ink_pressure_state == 1:
+    def toggle_drain(self):
+        if drain_state == 1:
             self.send_command("F002")
         else:
             self.send_command("F001")
 
-    def toggle_pump_pressure(self):
-        if pump_pressure_state == 1:
+    def toggle_pump_tank_pressure(self):
+        if pump_tank_pressure_state == 1:
             self.send_command("F004")
         else:
             self.send_command("F003")
 
-    def toggle_pump_vacuum(self):
-        if pump_vacuum_state == 1:
+    def toggle_pump_tank_vacuum(self):
+        if pump_tank_vacuum_state == 1:
             self.send_command("F006")
         else:
             self.send_command("F005")
@@ -454,8 +479,8 @@ class MainFrame(tk.Frame):
         else:
             self.send_command("F013")
             
-    def toggle_clean_nozzle(self):
-        if clean_nozzle_state == 1:
+    def toggle_nozzle_ink(self):
+        if nozzle_ink_state == 1:
             self.send_command("F016")
         else:
             self.send_command("F015")
@@ -465,6 +490,18 @@ class MainFrame(tk.Frame):
             self.send_command("F018")
         else:
             self.send_command("F017")
+            
+    def toggle_continuous_testing(self):
+        if continuous_testing_state == 1:
+            self.send_command("F020")
+        else:
+            self.send_command("F019")
+            
+    def toggle_viscosimeter(self):
+        if viscosimeter_state == 1:
+            self.send_command("F022")
+        else:
+            self.send_command("F021")
 
 app = tk.Tk()  
 main_frame = MainFrame()
