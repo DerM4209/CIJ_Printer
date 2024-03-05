@@ -92,82 +92,7 @@ public:
 //LovyanGFX
 LGFX lcd;
 
-//I2C IO
-#include "Wire.h"
-#define SDA 10
-#define SCL 11
-
-//I2C IO Registers
-#define MCP23017_ADRESS 0x27  //I2C Adress
-#define IODIRA 0x00           //Register for INPUT/OUTPUT A
-#define IODIRB 0x01           //Register for INPUT/OUTPUT B
-#define GPIOA 0x12            //Register for HIGH/LOW A
-#define GPIOB 0x13            //Register for HIGH/LOW B
-#define GPPUA 0x0C            //Register for Pullup A
-#define GPPUB 0x0D            //Register for Pullup B
-
-//I2C IO Pinmode
-//0 = Output 1 = Input
-#define PINMODE_A 0x00  //A 00000000
-#define PINMODE_B 0x00  //B 00000000
-
-//I2C IO Bits
-int io_value_1;   //A0
-int io_value_2;   //A1
-int io_value_3;   //A2
-int io_value_4;   //A3
-int io_value_5;   //A4
-int io_value_6;   //A5
-int io_value_7;   //A6
-int io_value_8;   //A7
-int io_value_9;   //B0
-int io_value_10;  //B1
-int io_value_11;  //B2
-int io_value_12;  //B3
-int io_value_13;  //B4
-int io_value_14;  //B5
-int io_value_15;  //B6
-int io_value_16;  //B7
-bool io_bit_1 = false;
-bool io_bit_2 = false;
-bool io_bit_3 = false;
-bool io_bit_4 = false;
-bool io_bit_5 = false;
-bool io_bit_6 = false;
-bool io_bit_7 = false;
-bool io_bit_8 = false;
-bool io_bit_9 = false;
-bool io_bit_10 = false;
-bool io_bit_11 = false;
-bool io_bit_12 = false;
-bool io_bit_13 = false;
-bool io_bit_14 = false;
-bool io_bit_15 = false;
-bool io_bit_16 = false;
-int io_a_value = 0;
-int previous_io_a_value = 0;
-int io_b_value = 0;
-int previous_io_b_value = 0;
-
-//I2C IO Pinout
-#define PUMP_PIN io_bit_16
-#define GUTTER_PIN io_bit_7
-#define MAKEUP_PIN io_bit_14
-#define NOZZLE_INK_PIN io_bit_13
-#define NOZZLE_CLEANING_PIN io_bit_8
-#define NOZZLE_VACUUM_PIN io_bit_4
-#define NOZZLE_MAKEUP_PIN io_bit_15
-#define VENT_WASTE_TANK_PIN io_bit_6
-#define DRAIN_WASTE_TANK_PIN io_bit_5
-#define VISCOSIMETER_PIN io_bit_2
-#define EMPTY_11 io_bit_9
-#define EMPTY_12 io_bit_11
-#define EMPTY_13 io_bit_12
-#define EMPTY_14 io_bit_10
-#define EMPTY_15 io_bit_3
-#define EMPTY_16 io_bit_1
-
-//Touch XY
+//GT911 XY
 int32_t touch_x;
 int32_t touch_y;
 int32_t last_x = 0;
@@ -183,10 +108,114 @@ bool vent_waste_tank_button = false;
 bool drain_waste_tank_button = false;
 bool viscosimeter_button = false;
 
-//RTC
+//MCP23017 I2C
+#include "Wire.h"
+#define SDA 10
+#define SCL 11
+#define MCP23017_ADRESS 0x27  //MCP Adress
+#define IODIRA 0x00           //Register for INPUT/OUTPUT A
+#define IODIRB 0x01           //Register for INPUT/OUTPUT B
+#define GPIOA 0x12            //Register for HIGH/LOW A
+#define GPIOB 0x13            //Register for HIGH/LOW B
+#define GPPUA 0x0C            //Register for Pullup A
+#define GPPUB 0x0D            //Register for Pullup B
+#define PINMODE_A 0x07        //A 00000111 0 = Output 1 = Input
+#define PINMODE_B 0x07        //B 00000111 0 = Output 1 = Input
+#define PULLUP_A 0x07         //A 00000111 0 = Output 1 = Input
+#define PULLUP_B 0x07         //B 00000111 0 = Output 1 = Input
+
+//MCP23017 Input Pinout
+#define VISCOSIMETER_UPPER_SWITCH 'B', 2
+#define VISCOSIMETER_LOWER_SWITCH 'A', 2
+#define WASTE_TANKR_SWITCH 'A', 1
+
+//MCP23017 Output Pinout
+#define PUMP_PIN mcp_out_bit_16
+#define GUTTER_PIN mcp_out_bit_7
+#define MAKEUP_PIN mcp_out_bit_14
+#define NOZZLE_INK_PIN mcp_out_bit_13
+#define NOZZLE_CLEANING_PIN mcp_out_bit_12
+#define NOZZLE_VACUUM_PIN mcp_out_bit_4
+#define NOZZLE_MAKEUP_PIN mcp_out_bit_15
+#define VENT_WASTE_TANK_PIN mcp_out_bit_6
+#define DRAIN_WASTE_TANK_PIN mcp_out_bit_5
+#define VISCOSIMETER_PIN mcp_out_bit_8
+#define NO_OUTPUT_11 mcp_out_bit_9
+#define NO_OUTPUT_12 mcp_out_bit_11
+#define NO_OUTPUT_13 mcp_out_bit_2
+#define NO_OUTPUT_14 mcp_out_bit_10
+#define NO_OUTPUT_15 mcp_out_bit_3
+#define NO_OUTPUT_16 mcp_out_bit_1
+
+//MCP23017 Output Bits
+int mcp_out_value_1;   //A0
+int mcp_out_value_2;   //A1
+int mcp_out_value_3;   //A2
+int mcp_out_value_4;   //A3
+int mcp_out_value_5;   //A4
+int mcp_out_value_6;   //A5
+int mcp_out_value_7;   //A6
+int mcp_out_value_8;   //A7
+int mcp_out_value_9;   //B0
+int mcp_out_value_10;  //B1
+int mcp_out_value_11;  //B2
+int mcp_out_value_12;  //B3
+int mcp_out_value_13;  //B4
+int mcp_out_value_14;  //B5
+int mcp_out_value_15;  //B6
+int mcp_out_value_16;  //B7
+bool mcp_out_bit_1 = false;
+bool mcp_out_bit_2 = false;
+bool mcp_out_bit_3 = false;
+bool mcp_out_bit_4 = false;
+bool mcp_out_bit_5 = false;
+bool mcp_out_bit_6 = false;
+bool mcp_out_bit_7 = false;
+bool mcp_out_bit_8 = false;
+bool mcp_out_bit_9 = false;
+bool mcp_out_bit_10 = false;
+bool mcp_out_bit_11 = false;
+bool mcp_out_bit_12 = false;
+bool mcp_out_bit_13 = false;
+bool mcp_out_bit_14 = false;
+bool mcp_out_bit_15 = false;
+bool mcp_out_bit_16 = false;
+int io_a_value = 0;
+int previous_io_a_value = 0;
+int io_b_value = 0;
+int previous_io_b_value = 0;
+byte io_input_a = 0;
+byte io_input_b = 0;
+
+//DS3231
 #include "uRTCLib.h"
 uRTCLib rtc(0x68);
 unsigned long rtc_millis = 0;
+
+//ADS1115
+#include <Wire.h>
+#define ADS1115 0x48
+#define CONFIG_REGISTER 1
+#define CONFIG_BYTE_1 0b10000011
+#define CONVERSION_REGISTER 0
+#define ADS_BUFFERCOUNT 16
+const uint8_t  CONFIG_BYTE_0[4] = {0b11010000, 0b11100000, 0b11110000, 0b11000000};
+const float    VOLTS_PER_STEP   = 6.144 / 32768.0;
+uint16_t ADS_averages[4], ADS_buffers[4][ADS_BUFFERCOUNT];
+
+//Viscosimeter
+unsigned long viscosimeter_pause = 10000;
+unsigned long viscosimeter_timeout = 60000;
+unsigned int viscosimeter_pump_time = 3000;
+unsigned long viscosimeter_counter_millis = 0;
+unsigned long viscosimeter_pause_millis = 0;
+unsigned long viscosimeter_pump_millis = 0;
+unsigned long viscosimeter_falltime = 0;
+unsigned int viscosimeter_case = 0;
+
+//Warnings
+unsigned long waste_tank_full_millis = 0;
+bool waste_tank_warning_led = false;
 
 //Setup
 void setup() {
@@ -194,9 +223,9 @@ void setup() {
   //LCD
   lcd.init();
   lcd.setBrightness(255);
-  lcd.fillScreen(TFT_WHITE);
-  lcd.setTextSize(1);
-  lcd.setTextColor(TFT_BLACK, TFT_WHITE);
+  lcd.fillScreen(TFT_BLACK);
+  lcd.setFont(&fonts::AsciiFont8x16);
+  lcd.setTextColor(TFT_WHITE, TFT_BLACK);
   lcd.fillRect(5, 5, 30, 30, TFT_RED);      // Pump
   lcd.fillRect(5, 45, 30, 30, TFT_RED);     // Gutter
   lcd.fillRect(5, 85, 30, 30, TFT_RED);     // MakeUp
@@ -208,7 +237,7 @@ void setup() {
   lcd.fillRect(5, 325, 30, 30, TFT_RED);    // Drain Waste Tank
   lcd.fillRect(5, 365, 30, 30, TFT_RED);    // Viscosimeter
   lcd.fillRect(5, 405, 30, 30, TFT_GREEN);  // Waste Tank Full
-  lcd.fillRect(5, 445, 30, 30, TFT_GREEN);  // Waste Tank Full
+  lcd.fillRect(5, 445, 30, 30, TFT_GREEN);  // CIJ Printer
   lcd.drawString("Pump", 50, 15);
   lcd.drawString("Gutter", 50, 55);
   lcd.drawString("MakeUp", 50, 95);
@@ -221,12 +250,17 @@ void setup() {
   lcd.drawString("Viscosimeter", 50, 375);
   lcd.drawString("Waste Tank Full", 50, 415);
   lcd.drawString("CIJ Printer", 50, 455);
-
+  lcd.drawString("    Sunday", 720, 455);
+  lcd.drawString("Viscosity:     0000 ms", 610, 5);
+  ////lcd.drawString("Pressure: 00.0 psi", 690, 95);
+  ////lcd.drawString("Temperature: 00.0 `C", 670, 80);
+  ////lcd.drawString("Conductivity: 000 ppm", 660, 110);
+  
   //Serial
   Serial.begin(115200);
   Serial.println("START");
 
-  //I2C IO
+  //MCP IO
   Wire.begin(SDA, SCL);
   Wire.beginTransmission(MCP23017_ADRESS);
   Wire.write(IODIRA);
@@ -236,12 +270,212 @@ void setup() {
   Wire.write(IODIRB);
   Wire.write(PINMODE_B);
   Wire.endTransmission();
+  Wire.beginTransmission(MCP23017_ADRESS);
+  Wire.write(GPPUA);
+  Wire.write(PULLUP_A);
+  Wire.endTransmission();
+  Wire.beginTransmission(MCP23017_ADRESS);
+  Wire.write(GPPUB);
+  Wire.write(PULLUP_B);
+  Wire.endTransmission();
 
   //RTC
   URTCLIB_WIRE.begin();
+
+  //ADS1115
+  InitAverages();
 }
 
-//Touch Buttons
+//Valve Functions
+//ON
+void pump_on() {
+  if (pump_button == false) {
+    Serial.println("Pump ON");
+    lcd.fillRect(5, 5, 30, 30, TFT_GREEN);
+    pump_button = true;
+    PUMP_PIN = true;
+  }
+}
+
+void gutter_on() {
+  if (gutter_button == false) {
+    Serial.println("Gutter ON");
+    lcd.fillRect(5, 45, 30, 30, TFT_GREEN);
+    gutter_button = true;
+    GUTTER_PIN = true;
+  }
+}
+
+void makeup_on() {
+  if (makeup_button == false) {
+    Serial.println("MakeUp ON");
+    lcd.fillRect(5, 85, 30, 30, TFT_GREEN);
+    makeup_button = true;
+    MAKEUP_PIN = true;
+  }
+}
+
+void nozzle_ink_on() {
+  if (nozzle_ink_button == false) {
+    Serial.println("Nozzle Ink ON");
+    lcd.fillRect(5, 125, 30, 30, TFT_GREEN);
+    nozzle_ink_button = true;
+    NOZZLE_INK_PIN = true;
+  }
+}
+
+void nozzle_cleaning_on() {
+  if (nozzle_cleaning_button == false) {
+    Serial.println("Nozzle Cleaning ON");
+    lcd.fillRect(5, 165, 30, 30, TFT_GREEN);
+    nozzle_cleaning_button = true;
+    NOZZLE_CLEANING_PIN = true;
+  }
+}
+
+void nozzle_vacuum_on() {
+  if (nozzle_vacuum_button == false) {
+    Serial.println("Nozzle Vacuum ON");
+    lcd.fillRect(5, 205, 30, 30, TFT_GREEN);
+    nozzle_vacuum_button = true;
+    NOZZLE_VACUUM_PIN = true;
+  }
+}
+
+void nozzle_makeup_on() {
+  if (nozzle_makeup_button == false) {
+    Serial.println("Nozzle MakeUp ON");
+    lcd.fillRect(5, 245, 30, 30, TFT_GREEN);
+    nozzle_makeup_button = true;
+    NOZZLE_MAKEUP_PIN = true;
+  }
+}
+
+void vent_waste_tank_on() {
+  if (vent_waste_tank_button == false) {
+    Serial.println("Vent Waste Tank ON");
+    lcd.fillRect(5, 285, 30, 30, TFT_GREEN);
+    vent_waste_tank_button = true;
+    VENT_WASTE_TANK_PIN = true;
+  }
+}
+
+void drain_waste_tank_on() {
+  if (drain_waste_tank_button == false) {
+    Serial.println("Drain Waste Tank ON");
+    lcd.fillRect(5, 325, 30, 30, TFT_GREEN);
+    drain_waste_tank_button = true;
+    DRAIN_WASTE_TANK_PIN = true;
+  }
+}
+
+void viscosimeter_on() {
+  if (viscosimeter_button == false) {
+    Serial.println("Viscosimeter ON");
+    lcd.fillRect(5, 365, 30, 30, TFT_GREEN);
+    viscosimeter_button = true;
+  }
+}
+
+void viscosimeter_pump_on() {
+  VISCOSIMETER_PIN = true;
+}
+
+//OFF
+void pump_off() {
+  if (pump_button == true) {
+    Serial.println("Pump OFF");
+    lcd.fillRect(5, 5, 30, 30, TFT_RED);
+    pump_button = false;
+    PUMP_PIN = false;
+  }
+}
+
+void gutter_off() {
+  if (gutter_button == true) {
+    Serial.println("Gutter OFF");
+    lcd.fillRect(5, 45, 30, 30, TFT_RED);
+    gutter_button = false;
+    GUTTER_PIN = false;
+  }
+}
+
+void makeup_off() {
+  if (makeup_button == true) {
+    Serial.println("MakeUp OFF");
+    lcd.fillRect(5, 85, 30, 30, TFT_RED);
+    makeup_button = false;
+    MAKEUP_PIN = false;
+  }
+}
+
+void nozzle_ink_off() {
+  if (nozzle_ink_button == true) {
+    Serial.println("Nozzle Ink OFF");
+    lcd.fillRect(5, 125, 30, 30, TFT_RED);
+    nozzle_ink_button = false;
+    NOZZLE_INK_PIN = false;
+  }
+}
+
+void nozzle_cleaning_off() {
+  if (nozzle_cleaning_button == true) {
+    Serial.println("Nozzle Cleaning OFF");
+    lcd.fillRect(5, 165, 30, 30, TFT_RED);
+    nozzle_cleaning_button = false;
+    NOZZLE_CLEANING_PIN = false;
+  }
+}
+
+void nozzle_vacuum_off() {
+  if (nozzle_vacuum_button == true) {
+    Serial.println("Nozzle Vacuum OFF");
+    lcd.fillRect(5, 205, 30, 30, TFT_RED);
+    nozzle_vacuum_button = false;
+    NOZZLE_VACUUM_PIN = false;
+  }
+}
+
+void nozzle_makeup_off() {
+  if (nozzle_makeup_button == true) {
+    Serial.println("Nozzle MakeUp OFF");
+    lcd.fillRect(5, 245, 30, 30, TFT_RED);
+    nozzle_makeup_button = false;
+    NOZZLE_MAKEUP_PIN = false;
+  }
+}
+
+void vent_waste_tank_off() {
+  if (vent_waste_tank_button == true) {
+    Serial.println("Vent Waste Tank OFF");
+    lcd.fillRect(5, 285, 30, 30, TFT_RED);
+    vent_waste_tank_button = false;
+    VENT_WASTE_TANK_PIN = false;
+  }
+}
+
+void drain_waste_tank_off() {
+  if (drain_waste_tank_button == true) {
+    Serial.println("Drain Waste Tank OFF");
+    lcd.fillRect(5, 325, 30, 30, TFT_RED);
+    drain_waste_tank_button = false;
+    DRAIN_WASTE_TANK_PIN = false;
+  }
+}
+
+void viscosimeter_off() {
+  if (viscosimeter_button == true) {
+    Serial.println("Viscosimeter OFF");
+    lcd.fillRect(5, 365, 30, 30, TFT_RED);
+    viscosimeter_button = false;
+  }
+}
+
+void viscosimeter_pump_off() {
+  VISCOSIMETER_PIN = false;
+}
+
+//GT911 Buttons
 void touch_buttons() {
 
   //Pump Button
@@ -249,7 +483,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 5 && touch_y <= 35) {
-          lcd.fillRect(5, 5, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           pump_on();
@@ -261,7 +494,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 5 && touch_y <= 35) {
-          lcd.fillRect(5, 5, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           pump_off();
@@ -275,7 +507,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 45 && touch_y <= 75) {
-          lcd.fillRect(5, 45, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           gutter_on();
@@ -287,7 +518,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 45 && touch_y <= 75) {
-          lcd.fillRect(5, 45, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           gutter_off();
@@ -301,7 +531,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 85 && touch_y <= 115) {
-          lcd.fillRect(5, 85, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           makeup_on();
@@ -313,7 +542,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 85 && touch_y <= 115) {
-          lcd.fillRect(5, 85, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           makeup_off();
@@ -327,7 +555,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 125 && touch_y <= 155) {
-          lcd.fillRect(5, 125, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_ink_on();
@@ -339,7 +566,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 125 && touch_y <= 155) {
-          lcd.fillRect(5, 125, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_ink_off();
@@ -353,7 +579,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 165 && touch_y <= 195) {
-          lcd.fillRect(5, 165, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_cleaning_on();
@@ -365,7 +590,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 165 && touch_y <= 195) {
-          lcd.fillRect(5, 165, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_cleaning_off();
@@ -379,7 +603,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 205 && touch_y <= 235) {
-          lcd.fillRect(5, 205, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_vacuum_on();
@@ -391,7 +614,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 205 && touch_y <= 235) {
-          lcd.fillRect(5, 205, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_vacuum_off();
@@ -405,7 +627,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 245 && touch_y <= 275) {
-          lcd.fillRect(5, 245, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_makeup_on();
@@ -417,7 +638,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 245 && touch_y <= 275) {
-          lcd.fillRect(5, 245, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           nozzle_makeup_off();
@@ -431,7 +651,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 285 && touch_y <= 315) {
-          lcd.fillRect(5, 285, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           vent_waste_tank_on();
@@ -443,7 +662,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 285 && touch_y <= 315) {
-          lcd.fillRect(5, 285, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           vent_waste_tank_off();
@@ -457,7 +675,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 325 && touch_y <= 355) {
-          lcd.fillRect(5, 325, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           drain_waste_tank_on();
@@ -469,7 +686,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 325 && touch_y <= 355) {
-          lcd.fillRect(5, 325, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           drain_waste_tank_off();
@@ -483,7 +699,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 365 && touch_y <= 395) {
-          lcd.fillRect(5, 365, 30, 30, TFT_GREEN);
           last_x = touch_x;
           last_y = touch_y;
           viscosimeter_on();
@@ -495,7 +710,6 @@ void touch_buttons() {
     if (touch_x != last_x || touch_y != last_y) {
       if (touch_x >= 5 && touch_x <= 35) {
         if (touch_y >= 365 && touch_y <= 395) {
-          lcd.fillRect(5, 365, 30, 30, TFT_RED);
           last_x = touch_x;
           last_y = touch_y;
           viscosimeter_off();
@@ -505,130 +719,7 @@ void touch_buttons() {
   }
 }
 
-//Valve Functions
-//ON
-void pump_on() {
-  Serial.println("Pump ON");
-  pump_button = true;
-  PUMP_PIN = true;
-}
-
-void gutter_on() {
-  Serial.println("Gutter ON");
-  gutter_button = true;
-  GUTTER_PIN = true;
-}
-
-void makeup_on() {
-  Serial.println("MakeUp ON");
-  makeup_button = true;
-  MAKEUP_PIN = true;
-}
-
-void nozzle_ink_on() {
-  Serial.println("Nozzle Ink ON");
-  nozzle_ink_button = true;
-  NOZZLE_INK_PIN = true;
-}
-
-void nozzle_cleaning_on() {
-  Serial.println("Nozzle Cleaning ON");
-  nozzle_cleaning_button = true;
-  NOZZLE_CLEANING_PIN = true;
-}
-
-void nozzle_vacuum_on() {
-  Serial.println("Nozzle Vacuum ON");
-  nozzle_vacuum_button = true;
-  NOZZLE_VACUUM_PIN = true;
-}
-
-void nozzle_makeup_on() {
-  Serial.println("Nozzle MakeUp ON");
-  nozzle_makeup_button = true;
-  NOZZLE_MAKEUP_PIN = true;
-}
-
-void vent_waste_tank_on() {
-  Serial.println("Vent Waste Tank ON");
-  vent_waste_tank_button = true;
-  VENT_WASTE_TANK_PIN = true;
-}
-
-void drain_waste_tank_on() {
-  Serial.println("Drain Waste Tank ON");
-  drain_waste_tank_button = true;
-  DRAIN_WASTE_TANK_PIN = true;
-}
-
-void viscosimeter_on() {
-  Serial.println("Viscosimeter ON");
-  viscosimeter_button = true;
-  VISCOSIMETER_PIN = true;
-}
-
-//OFF
-void pump_off() {
-  Serial.println("Pump OFF");
-  pump_button = false;
-  PUMP_PIN = false;
-}
-
-void gutter_off() {
-  Serial.println("Gutter OFF");
-  gutter_button = false;
-  GUTTER_PIN = false;
-}
-
-void makeup_off() {
-  Serial.println("MakeUp OFF");
-  makeup_button = false;
-  MAKEUP_PIN = false;
-}
-
-void nozzle_ink_off() {
-  Serial.println("Nozzle Ink OFF");
-  nozzle_ink_button = false;
-  NOZZLE_INK_PIN = false;
-}
-
-void nozzle_cleaning_off() {
-  Serial.println("Nozzle Cleaning OFF");
-  nozzle_cleaning_button = false;
-  NOZZLE_CLEANING_PIN = false;
-}
-
-void nozzle_vacuum_off() {
-  Serial.println("Nozzle Vacuum OFF");
-  nozzle_vacuum_button = false;
-  NOZZLE_VACUUM_PIN = false;
-}
-
-void nozzle_makeup_off() {
-  Serial.println("Nozzle MakeUp OFF");
-  nozzle_makeup_button = false;
-  NOZZLE_MAKEUP_PIN = false;
-}
-
-void vent_waste_tank_off() {
-  Serial.println("Vent Waste Tank OFF");
-  vent_waste_tank_button = false;
-  VENT_WASTE_TANK_PIN = false;
-}
-
-void drain_waste_tank_off() {
-  Serial.println("Drain Waste Tank OFF");
-  drain_waste_tank_button = false;
-  DRAIN_WASTE_TANK_PIN = false;
-}
-
-void viscosimeter_off() {
-  Serial.println("Viscosimeter OFF");
-  viscosimeter_button = false;
-  VISCOSIMETER_PIN = false;
-}
-
-//Touchscreen
+//GT911 Touchscreen
 void touchscreen() {
   if (lcd.getTouch(&touch_x, &touch_y)) {
   }
@@ -637,103 +728,103 @@ void touchscreen() {
 //MCP23017 Write
 void mcp23017_write() {
 
-  if (io_bit_1 == true) {
-    io_value_1 = 0;
+  if (mcp_out_bit_1 == true) {
+    mcp_out_value_1 = 0;
   } else {
-    io_value_1 = 1;
+    mcp_out_value_1 = 1;
   }
 
-  if (io_bit_2 == true) {
-    io_value_2 = 2;
+  if (mcp_out_bit_2 == true) {
+    mcp_out_value_2 = 0;
   } else {
-    io_value_2 = 0;
+    mcp_out_value_2 = 2;
   }
 
-  if (io_bit_3 == true) {
-    io_value_3 = 0;
+  if (mcp_out_bit_3 == true) {
+    mcp_out_value_3 = 0;
   } else {
-    io_value_3 = 4;
+    mcp_out_value_3 = 4;
   }
 
-  if (io_bit_4 == true) {
-    io_value_4 = 0;
+  if (mcp_out_bit_4 == true) {
+    mcp_out_value_4 = 0;
   } else {
-    io_value_4 = 8;
+    mcp_out_value_4 = 8;
   }
 
-  if (io_bit_5 == true) {
-    io_value_5 = 0;
+  if (mcp_out_bit_5 == true) {
+    mcp_out_value_5 = 0;
   } else {
-    io_value_5 = 16;
+    mcp_out_value_5 = 16;
   }
 
-  if (io_bit_6 == true) {
-    io_value_6 = 0;
+  if (mcp_out_bit_6 == true) {
+    mcp_out_value_6 = 0;
   } else {
-    io_value_6 = 32;
+    mcp_out_value_6 = 32;
   }
 
-  if (io_bit_7 == true) {
-    io_value_7 = 0;
+  if (mcp_out_bit_7 == true) {
+    mcp_out_value_7 = 0;
   } else {
-    io_value_7 = 64;
+    mcp_out_value_7 = 64;
   }
 
-  if (io_bit_8 == true) {
-    io_value_8 = 0;
+  if (mcp_out_bit_8 == true) {
+    mcp_out_value_8 = 128;
   } else {
-    io_value_8 = 128;
+    mcp_out_value_8 = 0;
   }
 
-  if (io_bit_9 == true) {
-    io_value_9 = 0;
+  if (mcp_out_bit_9 == true) {
+    mcp_out_value_9 = 0;
   } else {
-    io_value_9 = 1;
+    mcp_out_value_9 = 1;
   }
 
-  if (io_bit_10 == true) {
-    io_value_10 = 0;
+  if (mcp_out_bit_10 == true) {
+    mcp_out_value_10 = 0;
   } else {
-    io_value_10 = 2;
+    mcp_out_value_10 = 2;
   }
 
-  if (io_bit_11 == true) {
-    io_value_11 = 0;
+  if (mcp_out_bit_11 == true) {
+    mcp_out_value_11 = 0;
   } else {
-    io_value_11 = 4;
+    mcp_out_value_11 = 4;
   }
 
-  if (io_bit_12 == true) {
-    io_value_12 = 0;
+  if (mcp_out_bit_12 == true) {
+    mcp_out_value_12 = 0;
   } else {
-    io_value_12 = 8;
+    mcp_out_value_12 = 8;
   }
 
-  if (io_bit_13 == true) {
-    io_value_13 = 0;
+  if (mcp_out_bit_13 == true) {
+    mcp_out_value_13 = 0;
   } else {
-    io_value_13 = 16;
+    mcp_out_value_13 = 16;
   }
 
-  if (io_bit_14 == true) {
-    io_value_14 = 0;
+  if (mcp_out_bit_14 == true) {
+    mcp_out_value_14 = 0;
   } else {
-    io_value_14 = 32;
+    mcp_out_value_14 = 32;
   }
 
-  if (io_bit_15 == true) {
-    io_value_15 = 0;
+  if (mcp_out_bit_15 == true) {
+    mcp_out_value_15 = 0;
   } else {
-    io_value_15 = 64;
+    mcp_out_value_15 = 64;
   }
 
-  if (io_bit_16 == true) {
-    io_value_16 = 128;
+  if (mcp_out_bit_16 == true) {
+    mcp_out_value_16 = 128;
   } else {
-    io_value_16 = 0;
+    mcp_out_value_16 = 0;
   }
 
-  io_a_value = (io_value_1 + io_value_2 + io_value_3 + io_value_4 + io_value_5 + io_value_6 + io_value_7 + io_value_8);
+  io_a_value = (mcp_out_value_1 + mcp_out_value_2 + mcp_out_value_3 + mcp_out_value_4 + mcp_out_value_5 + mcp_out_value_6 + mcp_out_value_7 + mcp_out_value_8);
   if (previous_io_a_value != io_a_value) {
     Wire.beginTransmission(MCP23017_ADRESS);
     Wire.write(GPIOA);
@@ -743,7 +834,7 @@ void mcp23017_write() {
     previous_io_a_value = io_a_value;
   }
 
-  io_b_value = (io_value_9 + io_value_10 + io_value_11 + io_value_12 + io_value_13 + io_value_14 + io_value_15 + io_value_16);
+  io_b_value = (mcp_out_value_9 + mcp_out_value_10 + mcp_out_value_11 + mcp_out_value_12 + mcp_out_value_13 + mcp_out_value_14 + mcp_out_value_15 + mcp_out_value_16);
   if (previous_io_b_value != io_b_value) {
     Wire.beginTransmission(MCP23017_ADRESS);
     Wire.write(GPIOB);
@@ -754,7 +845,56 @@ void mcp23017_write() {
   }
 }
 
-//Add leading Zeros and Day of Week
+//MCP23017 Read
+bool mcp23017_read(char gpio, int bit) {
+  int gpio_register = 0;
+  Wire.beginTransmission(MCP23017_ADRESS);
+  Wire.write(GPIOA);
+  Wire.endTransmission();
+  Wire.requestFrom(MCP23017_ADRESS, 1);
+  io_input_a = Wire.read();
+  Wire.beginTransmission(MCP23017_ADRESS);
+  Wire.write(GPIOB);
+  Wire.endTransmission();
+  Wire.requestFrom(MCP23017_ADRESS, 1);
+  io_input_b = Wire.read();
+  if (gpio == 'A') {
+    gpio_register = io_input_a;
+  }
+  if (gpio == 'B') {
+    gpio_register = io_input_b;
+  }
+  if (bitRead(gpio_register, bit) == 0) {
+    return 1;
+  }
+  if (bitRead(gpio_register, bit) == 1) {
+    return 0;
+  }
+}
+
+//DS3231 Read
+void ds3231_read() {
+  if ((millis() - rtc_millis) > 1000) {
+    rtc.refresh();
+    print_rtc_reading();
+    rtc_millis = millis();
+  }
+  if (Serial.available()) {
+    int year = Serial.parseInt();
+    int month = Serial.parseInt();
+    int day = Serial.parseInt();
+    int dayOfWeek = Serial.parseInt();
+    int hour = Serial.parseInt();
+    int minute = Serial.parseInt();
+    int second = Serial.parseInt();
+    rtc.set(second, minute, hour, dayOfWeek, day, month, year);
+    while (Serial.available()) {
+      Serial.read();
+    }
+  }
+}
+
+//DS3231 Add leading Zeros and Day of Week
 void print_rtc_reading() {
   String time_zero;
   String date_zero;
@@ -784,7 +924,7 @@ void print_rtc_reading() {
     time_zero.concat(String(rtc.second()));
   }
   Serial.println(time_zero);
-  lcd.drawString(time_zero, 735, 5);
+  lcd.drawString(time_zero, 720, 410);
 
   //Date
   if (rtc.day() > 9) {
@@ -808,7 +948,7 @@ void print_rtc_reading() {
     date_zero.concat(String(rtc.year()));
   }
   Serial.println(date_zero);
-  lcd.drawString(date_zero, 735, 20);
+  lcd.drawString(date_zero, 720, 425);
 
   //Temperature
   temperature_zero.concat("      ");
@@ -818,63 +958,284 @@ void print_rtc_reading() {
     temperature_zero.concat("0");
     temperature_zero.concat(String((rtc.temp() / 100)));
   }
-  temperature_zero.concat(" C");
+  static const char roomtempend[5]     = { ' ', 247, 'C', ' ', 0 };
+  static const String roomtempEnd      = roomtempend;
+  temperature_zero.concat(roomtempEnd);
   Serial.println(temperature_zero);
-  lcd.drawString(temperature_zero, 735, 35);
+  lcd.drawString(temperature_zero, 710, 440);
 
   //Day of Week
   switch (day_of_week) {
     case 1:
       Serial.println("    Monday");
-      lcd.drawString("    Monday", 735, 50);
+      lcd.drawString("    Monday", 720, 455);
       break;
     case 2:
       Serial.println("   Tuesday");
-      lcd.drawString("   Tuesday", 735, 50);
+      lcd.drawString("   Tuesday", 720, 455);
       break;
     case 3:
       Serial.println(" Wednesday");
-      lcd.drawString(" Wednesday", 735, 50);
+      lcd.drawString(" Wednesday", 720, 455);
       break;
     case 4:
       Serial.println("  Thursday");
-      lcd.drawString("  Thursday", 735, 50);
+      lcd.drawString("  Thursday", 720, 455);
       break;
     case 5:
       Serial.println("    Friday");
-      lcd.drawString("    Friday", 735, 50);
+      lcd.drawString("    Friday", 720, 455);
       break;
     case 6:
       Serial.println("  Saturday");
-      lcd.drawString("  Saturday", 735, 50);
+      lcd.drawString("  Saturday", 720, 455);
       break;
     case 7:
       Serial.println("    Sunday");
-      lcd.drawString("    Sunday", 735, 50);
+      lcd.drawString("    Sunday", 720, 455);
       break;
   }
   Serial.println("");
 }
 
-//DS3231 Read
-void ds3231_read() {
-  if ((millis() - rtc_millis) > 1000) {
-    rtc.refresh();
-    print_rtc_reading();
-    rtc_millis = millis();
-  }
-  if (Serial.available()) {
-    int year = Serial.parseInt();
-    int month = Serial.parseInt();
-    int day = Serial.parseInt();
-    int dayOfWeek = Serial.parseInt();
-    int hour = Serial.parseInt();
-    int minute = Serial.parseInt();
-    int second = Serial.parseInt();
-    rtc.set(second, minute, hour, dayOfWeek, day, month, year);
-    while (Serial.available()) {
-      Serial.read();
+//ADS1115
+// This function just saves a lot of manual typing to initialize ADS_averages and ADS_buffers arrays to all '0's
+void InitAverages(){
+    for(uint8_t i=0; i<4; i++){
+        ADS_averages[i] = 0;
+        for(uint8_t j=0; j<16; j++){
+            ADS_buffers[i][j] = 0;
+        }
     }
+}
+
+// This function reads 4 analog values from the ADS1115; adds them to their respective ring buffers; then updates the values of ADS_averages to the new average values
+// NOTE: this function is NOT thread-safe and can cause collisions if used improperly
+void UpdateAverages(){
+    static uint8_t ADS_bufferIndex = 0;         // Tracks current position in the ring buffers
+    static uint8_t inputIndex = 0;              // Tracks which analog input we're sampling this cycle'
+    static uint32_t accumulator;
+    static uint8_t ads1115_read_buffer[2];
+
+    Wire.beginTransmission(ADS1115);
+    Wire.write(CONFIG_REGISTER);
+    Wire.write(CONFIG_BYTE_0[inputIndex]);
+    Wire.write(CONFIG_BYTE_1);
+    Wire.endTransmission();
+    Wire.beginTransmission(ADS1115);
+    Wire.write(CONVERSION_REGISTER);
+    Wire.endTransmission();
+    Wire.requestFrom(ADS1115, 2);
+    ads1115_read_buffer[0] = Wire.read();
+    ads1115_read_buffer[1] = Wire.read();
+    Wire.endTransmission();
+    ADS_buffers[inputIndex][ADS_bufferIndex] = ads1115_read_buffer[0] << 8 | ads1115_read_buffer[1];  // convert display results
+    if (ADS_buffers[inputIndex][ADS_bufferIndex] > 32768) {
+    ADS_buffers[inputIndex][ADS_bufferIndex] = 0;
+    }
+
+    // Now it's time to update the average read value for analog input'i'
+    accumulator = 0;
+    for(uint8_t j=0; j<ADS_BUFFERCOUNT; j++){
+        accumulator += ADS_buffers[inputIndex][j];
+    }
+    ADS_averages[inputIndex] = accumulator >> 4;     // This is where you'll have to change the averaging code if you modify ADS_BUFFERCOUNT
+
+    inputIndex++;
+    if(inputIndex >= 4){                            // Reset the inputIndex to 0 after reading the fourth input (A3) and increment the bufferIndex for the ring buffers
+        inputIndex = 0;
+        ADS_bufferIndex++;                          // Increment the ring-buffer position for the next read
+        if(ADS_bufferIndex >= ADS_BUFFERCOUNT){     // Reset ring-buffer position if we've reached the end'
+            ADS_bufferIndex = 0;
+        }
+    }
+}
+
+// This function will send values to the serial console, based on the current values in the ADS_averages[] array
+void SendAverages(){
+    static const String tempString = "Temperature:   ";
+    static const String tdsString  = "Conductivity:  ";
+    static const String prsString  = "Pressure:      ";
+	static const char tempend[5]     = { ' ', 247, 'C', ' ', 0 };
+	static const String tempEnd      = tempend;
+    static const String tdsEnd     = " ppm     ";
+    static const String prsEnd     = " psi     ";
+    static String outString;
+
+
+    // Pressure sensor == A0
+    double ink_pressure = ADS_averages[0] * VOLTS_PER_STEP;     // Convert raw ADC data to voltage
+    ink_pressure -= 0.5;                                        // 0.5v = 0psi
+    ink_pressure *= 20;                                         // 20 psi change per volt
+
+    // Format for constant-size output String
+    if(ink_pressure >= 10){
+        outString = prsString + String(ink_pressure, 1) + prsEnd;
+    }else{
+        outString = prsString + " " + String(ink_pressure, 1) + prsEnd;
+    }
+    lcd.drawString(outString, 610, 35);                         // Enable this in final code; commented out for testing without the display lib.
+    Serial.println(outString);
+
+    // Temperature sensor == A2
+    double temperature = CalculateTemperature(ADS_averages[2]);
+    if(temperature >= 10){
+        outString = tempString + String(temperature, 1) + tempEnd;
+    }else{
+        outString = tempString + " " + String(temperature, 1) + tempEnd;
+    }
+    lcd.drawString(outString, 610, 20);      // Enable this in final code; commented out for testing without the display lib.
+    Serial.println(outString);
+
+    // TDS sensor == A1
+    double tdsVoltage = ADS_averages[1] * VOLTS_PER_STEP;                   // Calculate TDS sensor voltage from the raw average ADC reading
+    double compensationCoefficient = 1.0 + 0.02 * (temperature - 25.0);     // Temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+    tdsVoltage = tdsVoltage / compensationCoefficient;                      // Compensate reading for the actual measured temperature
+    //convert voltage value to tds value
+    double tdsValue = ((133.42 * tdsVoltage * tdsVoltage * tdsVoltage) - (255.86 * tdsVoltage * tdsVoltage) + (857.39 * tdsVoltage)) * 0.5;
+    if(tdsValue >= 100){
+        outString = tdsString + " " + String(tdsValue, 0) + tdsEnd;
+    }else if(tdsValue >= 10){
+        outString = tdsString + "  " + String(tdsValue, 0) + tdsEnd;
+    }else{
+        outString = tdsString + "   " + String(tdsValue, 0) + tdsEnd;
+    }
+    lcd.drawString(outString, 610, 50);      // Enable this in final code; commented out for testing without the display lib.
+    Serial.println(outString);
+
+    Serial.println("\n");           // Insert 2 blank lines, to make values easier to read.
+}
+
+// This function converts a raw average value into a calculated centigrade temperature
+double CalculateTemperature(uint16_t rawAvg){
+    const uint16_t Rref_resistance       = 10000;
+    const uint16_t thermistor_Rnominal   = 10000;
+    const uint16_t beta                  = 3435;
+    const uint8_t  nominal_temperature   = 25;
+    const double   kelvin_offset         = 273.15;
+
+    double voltage = rawAvg * VOLTS_PER_STEP;                   // ADC voltage
+    double current = (voltage) / Rref_resistance;               // Determine current through the voltage divider
+    double readResistance = (5 / current) - Rref_resistance;    // Determine the thermistor's resistance based on 5V vcc, Rref_resistance, and current
+    double temperature = (beta * (nominal_temperature + kelvin_offset)) /
+                         (beta + ((nominal_temperature + kelvin_offset) * log(readResistance / thermistor_Rnominal)));  // Calculate temperature (in Kelvin)
+    temperature -= kelvin_offset;                               // Convert to Centigrade
+
+    return temperature;
+}
+
+//ADS1115 Read
+void ads1115_read() {
+    static const uint16_t ADS_INTERVAL    = 25;   // Timeout (in ms) between ADS1115 reads (per input, so effectively this number gets multiplied by 4)
+    static const uint16_t SERIAL_INTERVAL = 250;   // Timeout (in ms) betweeen serial updates
+
+    static unsigned long last_ADS_read_millis = 0;
+    static unsigned long last_serial_update_millis = 0;
+    static unsigned long currMillis = 0;
+
+    currMillis = millis();
+    if(currMillis > last_ADS_read_millis + ADS_INTERVAL){
+        UpdateAverages();
+        last_ADS_read_millis = currMillis;
+    }
+
+    if(currMillis > last_serial_update_millis + SERIAL_INTERVAL){
+        SendAverages();
+        last_serial_update_millis = currMillis;
+    }
+}
+
+//Viscosimeter
+void viscosimeter() {
+  switch (viscosimeter_case) {
+    case 0:  //Viscosimeter running?
+      if (viscosimeter_button == true) {
+        viscosimeter_pause_millis = millis();
+        viscosimeter_case = 1;
+      }
+      //Serial.println("Case 0");
+      break;
+    case 1:  //Pause
+      if (millis() - viscosimeter_pause_millis >= viscosimeter_pause) {
+        viscosimeter_pump_millis = millis();
+        viscosimeter_case = 2;
+      }
+      if (viscosimeter_button == false) {
+        viscosimeter_case = 0;
+      }
+      //Serial.println("Case 1");
+      break;
+    case 2:  //Lift Ball;
+      viscosimeter_pump_on();
+      if (millis() - viscosimeter_pump_millis >= viscosimeter_pump_time) {
+        viscosimeter_pump_off();
+        viscosimeter_case = 3;
+      }
+      if (viscosimeter_button == false) {
+        viscosimeter_case = 0;
+      }
+      //Serial.println("Case 2");
+      break;
+    case 3:  //Reset Counter
+      if (mcp23017_read(VISCOSIMETER_UPPER_SWITCH) == true) {
+        viscosimeter_counter_millis = millis();
+        viscosimeter_case = 4;
+      }
+      if (millis() - viscosimeter_pause_millis >= viscosimeter_timeout) {
+        Serial.println("Timeout!");
+        viscosimeter_case = 0;
+      }
+      if (viscosimeter_button == false) {
+        viscosimeter_case = 0;
+      }
+      //Serial.println("Case 3");
+      break;
+    case 4:  //Stop Counter and report Falltime
+      if (mcp23017_read(VISCOSIMETER_LOWER_SWITCH) == true) {
+        viscosimeter_falltime = millis() - viscosimeter_counter_millis;
+        Serial.println("Viscosity: " + String(viscosimeter_falltime) + " ms");
+        lcd.drawString("Viscosity:     " + String(viscosimeter_falltime) + " ms", 610, 5);
+        viscosimeter_case = 0;
+      }
+      if (millis() - viscosimeter_pause_millis >= viscosimeter_timeout) {
+        Serial.println("Timeout!");
+        viscosimeter_case = 0;
+      }
+      if (viscosimeter_button == false) {
+        viscosimeter_case = 0;
+      }
+      //Serial.println("Case 4");
+      break;
+  }
+}
+
+//Check Warnings
+void check_warnings() {
+
+  //Waste Tank
+  if (mcp23017_read(WASTE_TANKR_SWITCH) == false) {
+    pump_off();
+    gutter_off();
+    makeup_off();
+    nozzle_ink_off();
+    nozzle_cleaning_off();
+    nozzle_vacuum_off();
+    nozzle_makeup_off();
+    viscosimeter_off();
+    if (millis() - waste_tank_full_millis > 1000 && waste_tank_warning_led == false) {
+      lcd.fillRect(5, 405, 30, 30, TFT_PURPLE);
+      waste_tank_warning_led = true;
+      waste_tank_full_millis = millis();
+    }
+    if (millis() - waste_tank_full_millis > 1000 && waste_tank_warning_led == true) {
+      lcd.fillRect(5, 405, 30, 30, TFT_GREEN);
+      waste_tank_warning_led = false;
+      waste_tank_full_millis = millis();
+    }
+  }
+  if (mcp23017_read(WASTE_TANKR_SWITCH) == true) {
+    lcd.fillRect(5, 405, 30, 30, TFT_GREEN);
+    waste_tank_warning_led = false;
   }
 }
 
@@ -884,4 +1245,7 @@ void loop() {
   touch_buttons();
   mcp23017_write();
   ds3231_read();
+  ads1115_read();
+  viscosimeter();
+  check_warnings();
 }
