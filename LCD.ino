@@ -242,8 +242,8 @@ PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, REVERSE);
 
 //Wifi
 #include <WiFi.h>
-#define WIFI_SSID "FRITZ!Box Fon WLAN 7360"
-#define WIFI_PASSWORD "333724476976386"
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
 
 //Datalogger
 //#include <WiFiClient.h>
@@ -272,10 +272,10 @@ uint32_t timestamp = 0;
 
 //Google Sheets
 #include <ESP_Google_Sheet_Client.h>
-#define PROJECT_ID "109615531160123849169"
-#define CLIENT_EMAIL "cij-printer-datalogger@cij-printer.iam.gserviceaccount.com"
-#define USER_EMAIL "meffertdominik@gmail.com"
-const char PRIVATE_KEY[] PROGMEM = "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCem6jE8zVKK78Z\nbMkHfLypRXpIbCOgzHgesrns3dRbnxcSCOhFg3iP77FL5yDzLPe02qqtfjDdDPaa\nOjmyVEUNOPAVliYzy7mrPigM5muBmBUk5ZuFDikbiIsTTyBzZyoclQSrY5inv80M\nl+mqxHdwkTonLzh/Yf9EGK2myGpyjuXYOwXpsDciIBRVh3hLuMMEttVwLXjoWMFc\nSoUJkxxyWB2CPRhL+kL9VQ+2+5fHKHcHC4ckxabzb0mjhC5kgtSLWUuaGZ0upZdf\n/tMpjCSYYKvqmqjoh4ZPv0yIet5UIbFwAKLE4GPaPIwx6zm3DLFQDIPog3ULWLSl\nn+LyB0uTAgMBAAECggEAAzNb8AGCaUlBtXcjBWIognfy9EQuYd/OarwrkVKWpvSq\naARC/6gcBjeNid0TpqSZKQ6ilBawUL2iulEDegxGSnKEMcNSaQgq6oA6GayKrdZO\nUuzJOyGihbo3KEAYBQwnZuVA7152pafysNbd8cK+MEjV9hV3W+az2oFu+6cessoU\nRINemATM1AYcweMIM2k5uBnVg/EjZ7yc8RMIBahXl8+YLuRkTKDARrnXwIG/kqUS\nSc2ci6l+H9U5zwRfyDsexnghHY76Pitf/+5Op9JzFIGjPxtibBn0O5TKYOzUHGn4\np5A5itZDCikPGCf+TgxdeI/hC4XDItQz/zEMhWSIKQKBgQDZLwP7ja91cleRcN79\nN//I3Ir945LQ9y3xcVfIKzHpJDnpP1Q6M8zydjjo3YKbv+Met8kn88hMlpULyJf8\niReQ630uEK9pdJyGpvL+nY6WSVbJbH+XHZW7/HWZBCMITBlDf/gHxBgTOoWSPyZF\ndW/hDeRxoBTkz1vn75s68nkv2wKBgQC69JXGDMFkINdcqajBEIr6extdpEl7WQP3\nXs6FX52ktYvdQMQNOcCLkmkyr8HyLUeuR7q05CJFGnxtnuEzMRgG00WYnNnV0MHl\nA1GYtTN8HxZSO8geLyRxFNst0C78Nw4gZ69ZFF8JBFp+/Oo5c1Pt/GcPAuE5fv6s\nHUfI6rxcqQKBgHLsTQg0ni7gtXOxrV2C32fzQ907KfpHgdksJ841BTEgSUCikThH\nJuD6K/0VEcLG1DDyAZCRkGDuoandmIc6J+04n0Hb9GYyHY2nFBglWUkvP6xQLGfT\ncONLoRK6PKtsUUYFlkLNwguSwRF1NxQ0I2KMjmCN2+CD1Vcy1ApqOjRXAoGAX09/\n57brBOPlR11LJhoL8ETAn824lIS+C+eue7pSQP0477Qr/t4Zdk5PCUMnKhLBf20c\nF0pS2k31b2FXR+TYbepZicM1HtdNcjZt6988/yNOGuBVVmYMOwY58zI2MejTb9vM\nPiqvhIZOqHzB4EYWXLaXx8RdFBXVOeO3jAt3ufkCgYEArkkgCr6OQZU5l9u0/wQj\n3Mh0wfPdQ/NXLmRGS7SQpumwCEkb+L6IltdH6cIGyyheFAZ25bn0qw2Qn6+Q2vF4\nHHdpx3gZNrPjrYdplUbH/mHB1oDrzEB4dabW0lHhHq6OqBn4vEK52NJN/CewiWzm\nh6BPTuGKGOEgEbV81tmudiw=\n-----END PRIVATE KEY-----\n";
+#define PROJECT_ID ""
+#define CLIENT_EMAIL ""
+#define USER_EMAIL ""
+const char PRIVATE_KEY[] PROGMEM = "";
 bool taskComplete = false;
 
 //Setup
