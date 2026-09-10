@@ -182,6 +182,26 @@ bool button_11_state = false;
 #define BUTTON_12_OFF_ACTION
 bool button_12_state = false;
 
+// Button 13
+#define BUTTON_13_ON_ACTION increase_pressure_on()
+#define BUTTON_13_OFF_ACTION increase_pressure_off()
+bool button_13_state = false;
+
+// Button 14
+#define BUTTON_14_ON_ACTION decrease_pressure_on()
+#define BUTTON_14_OFF_ACTION decrease_pressure_off()
+bool button_14_state = false;
+
+// Button 15
+#define BUTTON_15_ON_ACTION auto_pressure_on()
+#define BUTTON_15_OFF_ACTION auto_pressure_off()
+bool button_15_state = false;
+
+//Safety Feature
+bool system_pressurized = false;
+bool ink_line_open = false;
+bool vacuum_line_open = false;
+
 //I2C
 #include <Wire.h>
 #define SDA 10
@@ -218,16 +238,17 @@ float pressure_velocity_ratio = 0.0;
 #define NOT_USED_INPUT_A 'A', 0
 
 //MCP23017 Output Pinout
-#define RETURN_PUMP_PIN mcp_out_bit_7
-#define GUTTER_LINE_PIN mcp_out_bit_12
-#define INK_LINE_PIN mcp_out_bit_13
-#define VACUUM_LINE_PIN mcp_out_bit_4
-#define FLUSH_LINE_PIN mcp_out_bit_15
+#define RETURN_PUMP_PIN mcp_out_bit_6
+#define GUTTER_LINE_PIN mcp_out_bit_16
+#define INK_LINE_PIN mcp_out_bit_7
+#define VACUUM_LINE_PIN mcp_out_bit_15
+#define FLUSH_LINE_PIN mcp_out_bit_8
 #define SOLVENT_LINE_PIN mcp_out_bit_14
-#define DIR_PIN_B mcp_out_bit_16
-#define DIR_PIN_A mcp_out_bit_8
-#define NOT_USED_5_PIN mcp_out_bit_5
-#define NOT_USED_6_PIN mcp_out_bit_6
+#define PUMP_DIR_PIN_B mcp_out_bit_5
+#define PUMP_DIR_PIN_A mcp_out_bit_13
+#define PRESSURE_DIR_PIN_B mcp_out_bit_4
+#define PRESSURE_DIR_PIN_A mcp_out_bit_12
+
 #define NOT_USED_3_PIN mcp_out_bit_3
 #define NOT_USED_11_PIN mcp_out_bit_11
 #define NOT_USED_2_PIN mcp_out_bit_2
@@ -374,6 +395,28 @@ void setup() {
   lcd.drawString(BUTTON_12_LABEL, 50, 455);
 
   //Right Items
+  //Sensor Readings
+  lcd.drawString("T System: ", 615, 5);
+  lcd.drawString("T Nozzle: ", 615, 20);
+  lcd.drawString("Conductivity: ", 615, 35);
+  lcd.drawString("Pressure: ", 615, 50);
+
+  //Pressure Control
+  //Button +
+  lcd.fillRect(615, 70, 30, 30, TFT_WHITE);
+  lcd.setTextColor(TFT_BLACK, TFT_WHITE);
+  lcd.drawString("+", 626, 77);
+
+  //Button -
+  lcd.fillRect(665, 70, 30, 30, TFT_WHITE);
+  lcd.drawString("-", 676, 77);
+
+  //Button Auto
+  lcd.fillRect(715, 70, 36, 30, TFT_WHITE);
+  lcd.drawString("AUTO", 717, 77);
+  lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+
+  //Readings with Range
   lcd.drawString("Velocity:    0 m/s", 615, 105);
   lcd.drawString("S0:", 615, 145);
   lcd.fillRect(645, 147, 10, 10, TFT_RED);
@@ -404,8 +447,8 @@ void setup() {
   Wire.endTransmission();
 
   //BTS9760 H Bridge Direction
-  DIR_PIN_A = true;
-  DIR_PIN_B = false;
+  PUMP_DIR_PIN_A = true;
+  PUMP_DIR_PIN_B = false;
 
   //PWM for Pressure Pump
   mcpwm_timer_config_t timer0_config = {
@@ -431,6 +474,10 @@ void setup() {
   mcpwm_timer_enable(timer0);
   mcpwm_timer_start_stop(timer0, MCPWM_TIMER_START_NO_STOP);
   mcpwm_generator_set_force_level(generator0, 0, true);
+
+  //Pressure Regulator Direction
+  PRESSURE_DIR_PIN_A = false;
+  PRESSURE_DIR_PIN_B = false;
 }
 
 //Relay Functions
@@ -438,10 +485,12 @@ void setup() {
 void pressure_pump_on() {
   Serial.println("Pressure Pump ON");
   mcpwm_generator_set_force_level(generator0, -1, true);
+  system_pressurized = true;
 }
 void pressure_pump_off() {
   Serial.println("Pressure Pump OFF");
   mcpwm_generator_set_force_level(generator0, 0, true);
+  system_pressurized = false;
 }
 
 //Return Pump
@@ -468,20 +517,24 @@ void gutter_line_off() {
 void ink_line_on() {
   Serial.println("Ink Line ON");
   INK_LINE_PIN = true;
+  ink_line_open = true;
 }
 void ink_line_off() {
   Serial.println("Ink Line OFF");
   INK_LINE_PIN = false;
+  ink_line_open = false;
 }
 
 //Vacuum Line
 void vacuum_line_on() {
   Serial.println("Vacuum Line ON");
   VACUUM_LINE_PIN = true;
+  vacuum_line_open = true;
 }
 void vacuum_line_off() {
   Serial.println("Vacuum Line OFF");
   VACUUM_LINE_PIN = false;
+  vacuum_line_open = false;
 }
 
 //Flush Line
@@ -504,18 +557,53 @@ void solvent_pump_off() {
   SOLVENT_LINE_PIN = false;
 }
 
+//Increase Pressure
+void increase_pressure_on() {
+  Serial.println("Increase Pressure ON");
+  PRESSURE_DIR_PIN_A = true;
+  PRESSURE_DIR_PIN_B = false;
+}
+void increase_pressure_off() {
+  Serial.println("Increase Pressure OFF");
+  PRESSURE_DIR_PIN_A = false;
+  PRESSURE_DIR_PIN_B = false;
+}
+
+//Decrease Pressure
+void decrease_pressure_on() {
+  Serial.println("Decrease Pressure ON");
+  PRESSURE_DIR_PIN_A = false;
+  PRESSURE_DIR_PIN_B = true;
+}
+void decrease_pressure_off() {
+  Serial.println("Decrease Pressure OFF");
+  PRESSURE_DIR_PIN_A = false;
+  PRESSURE_DIR_PIN_B = false;
+}
+
+//Auto_Pressure
+void auto_pressure_on() {
+  Serial.println("Auto Pressure ON");
+}
+void auto_pressure_off() {
+  Serial.println("Auto Pressure OFF");
+}
+
 // GT911
 void touch_buttons() {
+
   // Button 1
-  if (button_1_state == false) {
-    if (touch_x != last_x || touch_y != last_y) {
-      if (touch_x >= 5 && touch_x <= 35) {
-        if (touch_y >= 5 && touch_y <= 35) {
-          last_x = touch_x;
-          last_y = touch_y;
-          BUTTON_1_ON_ACTION;
-          lcd.fillRect(5, 5, 30, 30, TFT_GREEN);
-          button_1_state = true;
+  if (!(ink_line_open == true && vacuum_line_open == true)) {  //Prevent pressurized ink in vacuum line
+    if (button_1_state == false) {
+      if (touch_x != last_x || touch_y != last_y) {
+        if (touch_x >= 5 && touch_x <= 35) {
+          if (touch_y >= 5 && touch_y <= 35) {
+            last_x = touch_x;
+            last_y = touch_y;
+            BUTTON_1_ON_ACTION;
+            lcd.fillRect(5, 5, 30, 30, TFT_GREEN);
+            button_1_state = true;
+          }
         }
       }
     }
@@ -591,15 +679,17 @@ void touch_buttons() {
   }
 
   // Button 4
-  if (button_4_state == false) {
-    if (touch_x != last_x || touch_y != last_y) {
-      if (touch_x >= 5 && touch_x <= 35) {
-        if (touch_y >= 125 && touch_y <= 155) {
-          last_x = touch_x;
-          last_y = touch_y;
-          BUTTON_4_ON_ACTION;
-          lcd.fillRect(5, 125, 30, 30, TFT_GREEN);
-          button_4_state = true;
+  if (!(system_pressurized == true && vacuum_line_open == true)) {  //Prevent pressurized ink in vacuum line
+    if (button_4_state == false) {
+      if (touch_x != last_x || touch_y != last_y) {
+        if (touch_x >= 5 && touch_x <= 35) {
+          if (touch_y >= 125 && touch_y <= 155) {
+            last_x = touch_x;
+            last_y = touch_y;
+            BUTTON_4_ON_ACTION;
+            lcd.fillRect(5, 125, 30, 30, TFT_GREEN);
+            button_4_state = true;
+          }
         }
       }
     }
@@ -619,15 +709,17 @@ void touch_buttons() {
   }
 
   // Button 5
-  if (button_5_state == false) {
-    if (touch_x != last_x || touch_y != last_y) {
-      if (touch_x >= 5 && touch_x <= 35) {
-        if (touch_y >= 165 && touch_y <= 195) {
-          last_x = touch_x;
-          last_y = touch_y;
-          BUTTON_5_ON_ACTION;
-          lcd.fillRect(5, 165, 30, 30, TFT_GREEN);
-          button_5_state = true;
+  if (!(system_pressurized == true && ink_line_open == true)) {  //Prevent pressurized ink in vacuum line
+    if (button_5_state == false) {
+      if (touch_x != last_x || touch_y != last_y) {
+        if (touch_x >= 5 && touch_x <= 35) {
+          if (touch_y >= 165 && touch_y <= 195) {
+            last_x = touch_x;
+            last_y = touch_y;
+            BUTTON_5_ON_ACTION;
+            lcd.fillRect(5, 165, 30, 30, TFT_GREEN);
+            button_5_state = true;
+          }
         }
       }
     }
@@ -841,6 +933,96 @@ void touch_buttons() {
       }
     }
   }
+
+  // Button 13
+  if (lcd.getTouch(&touch_x, &touch_y)) {
+    if (touch_x >= 615 && touch_x <= 645 && touch_y >= 70 && touch_y <= 100) {
+      if (!button_13_state) {
+        BUTTON_13_ON_ACTION;
+        lcd.fillRect(615, 70, 30, 30, TFT_DARKGREY);
+        lcd.setTextColor(TFT_BLACK, TFT_DARKGREY);
+        lcd.drawString("+", 626, 77);
+        lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+        button_13_state = true;
+      }
+    } else if (button_13_state) {
+      BUTTON_13_OFF_ACTION;
+      lcd.fillRect(615, 70, 30, 30, TFT_WHITE);
+      lcd.setTextColor(TFT_BLACK, TFT_WHITE);
+      lcd.drawString("+", 626, 77);
+      lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+      button_13_state = false;
+    }
+  } else if (button_13_state) {
+    BUTTON_13_OFF_ACTION;
+    lcd.fillRect(615, 70, 30, 30, TFT_WHITE);
+    lcd.setTextColor(TFT_BLACK, TFT_WHITE);
+    lcd.drawString("+", 626, 77);
+    lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+    button_13_state = false;
+  }
+
+  // Button 14
+  if (lcd.getTouch(&touch_x, &touch_y)) {
+    if (touch_x >= 665 && touch_x <= 695 && touch_y >= 70 && touch_y <= 100) {
+      if (!button_14_state) {
+        BUTTON_14_ON_ACTION;
+        lcd.fillRect(665, 70, 30, 30, TFT_DARKGREY);
+        lcd.setTextColor(TFT_BLACK, TFT_DARKGREY);
+        lcd.drawString("-", 676, 77);
+        lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+        button_14_state = true;
+      }
+    } else if (button_14_state) {
+      BUTTON_14_OFF_ACTION;
+      lcd.fillRect(665, 70, 30, 30, TFT_WHITE);
+      lcd.setTextColor(TFT_BLACK, TFT_WHITE);
+      lcd.drawString("-", 676, 77);
+      lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+      button_14_state = false;
+    }
+  } else if (button_14_state) {
+    BUTTON_14_OFF_ACTION;
+    lcd.fillRect(665, 70, 30, 30, TFT_WHITE);
+    lcd.setTextColor(TFT_BLACK, TFT_WHITE);
+    lcd.drawString("-", 676, 77);
+    lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+    button_14_state = false;
+  }
+
+  // Button 15
+  if (button_15_state == false) {
+    if (touch_x != last_x || touch_y != last_y) {
+      if (touch_x >= 715 && touch_x <= 751) {
+        if (touch_y >= 70 && touch_y <= 100) {
+          last_x = touch_x;
+          last_y = touch_y;
+          BUTTON_15_ON_ACTION;
+          lcd.fillRect(715, 70, 36, 30, TFT_DARKGREY);
+          lcd.setTextColor(TFT_BLACK, TFT_DARKGREY);
+          lcd.drawString("AUTO", 717, 77);
+          lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+          button_15_state = true;
+        }
+      }
+    }
+  }
+  if (button_15_state == true) {
+    if (touch_x != last_x || touch_y != last_y) {
+      if (touch_x >= 715 && touch_x <= 751) {
+        if (touch_y >= 70 && touch_y <= 100) {
+          last_x = touch_x;
+          last_y = touch_y;
+          BUTTON_15_OFF_ACTION;
+          lcd.fillRect(715, 70, 36, 30, TFT_WHITE);
+          lcd.setTextColor(TFT_BLACK, TFT_WHITE);
+          lcd.drawString("AUTO", 717, 77);
+          lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+          button_15_state = false;
+        }
+      }
+    }
+  }
 }
 
 //Touchscreen
@@ -895,9 +1077,9 @@ void mcp23017_write() {
   }
 
   if (mcp_out_bit_8 == true) {
-    mcp_out_value_8 = 128;
-  } else {
     mcp_out_value_8 = 0;
+  } else {
+    mcp_out_value_8 = 128;
   }
 
   if (mcp_out_bit_9 == true) {
@@ -943,9 +1125,9 @@ void mcp23017_write() {
   }
 
   if (mcp_out_bit_16 == true) {
-    mcp_out_value_16 = 128;
-  } else {
     mcp_out_value_16 = 0;
+  } else {
+    mcp_out_value_16 = 128;
   }
 
   io_a_value = (mcp_out_value_1 + mcp_out_value_2 + mcp_out_value_3 + mcp_out_value_4 + mcp_out_value_5 + mcp_out_value_6 + mcp_out_value_7 + mcp_out_value_8);
@@ -1144,7 +1326,7 @@ void ds3231_read() {
   set_clock();
 }
 
-//ADS1115 //change needed
+//ADS1115
 void ads1115_read() {
   if (current_millis - ads1115_millis > 1000) {
     static uint16_t inputIndex = 0;
@@ -1209,25 +1391,25 @@ void convertrawreadings() {
   } else {
     outString = pressure_string + " " + String(ink_pressure, 1) + prsEnd;
   }
-  lcd.drawString(outString, 615, 35);
+  lcd.drawString(outString, 615, 50);  //Pressure
 
   // Temperature sensors == A2 & A3
-  double temperature = CalculateTemperature(system_temperature_int);
+  double temperature = calculate_temperature_3435(system_temperature_int);
   system_temperature_float = temperature;
   if (temperature >= 10) {
     outString = system_temp_string + String(temperature, 1) + tempEnd;
   } else {
     outString = system_temp_string + " " + String(temperature, 1) + tempEnd;
   }
-  lcd.drawString(outString, 615, 5);
-  temperature = CalculateTemperature(nozzle_temperature_int);
+  lcd.drawString(outString, 615, 5);  //T System
+  temperature = calculate_temperature_3950(nozzle_temperature_int);
   nozzle_temperature_float = temperature;
   if (temperature >= 10) {
     outString = nozzle_temp_string + String(temperature, 1) + tempEnd;
   } else {
     outString = nozzle_temp_string + " " + String(temperature, 1) + tempEnd;
   }
-  lcd.drawString(outString, 615, 20);
+  lcd.drawString(outString, 615, 20);  //T Nozzle
 
   // TDS sensor == A1
   double tdsVoltage = tds_int * VOLTS_PER_STEP;
@@ -1242,13 +1424,27 @@ void convertrawreadings() {
   } else {
     outString = tds_string + "   " + String(tdsValue, 0) + tdsEnd;
   }
-  lcd.drawString(outString, 615, 50);
+  lcd.drawString(outString, 615, 35);  //Conductivity
 }
 
-double CalculateTemperature(uint16_t rawAvg) {
+double calculate_temperature_3435(uint16_t rawAvg) {
   const uint16_t Rref_resistance = 10000;
   const uint16_t thermistor_Rnominal = 10000;
   const uint16_t beta = 3435;
+  const uint8_t nominal_temperature = 25;
+  const double kelvin_offset = 273.15;
+  double voltage = rawAvg * VOLTS_PER_STEP;                                                                                                                            // ADC voltage
+  double current = (voltage) / Rref_resistance;                                                                                                                        // Determine current through the voltage divider
+  double readResistance = (5 / current) - Rref_resistance;                                                                                                             // Determine the thermistor's resistance based on 5V vcc, Rref_resistance, and current
+  double temperature = (beta * (nominal_temperature + kelvin_offset)) / (beta + ((nominal_temperature + kelvin_offset) * log(readResistance / thermistor_Rnominal)));  // Calculate temperature (in Kelvin)
+  temperature -= kelvin_offset;                                                                                                                                        // Convert to Centigrade
+  return temperature;
+}
+
+double calculate_temperature_3950(uint16_t rawAvg) {
+  const uint16_t Rref_resistance = 10000;
+  const uint32_t thermistor_Rnominal = 100000;
+  const uint16_t beta = 3950;
   const uint8_t nominal_temperature = 25;
   const double kelvin_offset = 273.15;
   double voltage = rawAvg * VOLTS_PER_STEP;                                                                                                                            // ADC voltage
